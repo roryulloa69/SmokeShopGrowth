@@ -38,13 +38,12 @@ CALL FLOW:
 1. Answer the phone: "Hey, this is ${AGENT_NAME}. Who am I speaking with?"
 2. If they ask why you called: "I reached out earlier because I was looking at smoke shops in your area and noticed you might benefit from a modern, mobile-friendly website. I actually built a free demo concept for your shop specifically, just to show what it could look like. Did you want me to send you the link?"
 3. If they ask about cost: "No worries — I'm just starting out so it's super affordable, around $200–$400 depending on what you need. But there's zero commitment to just look at the demo."
-4. If they say yes: "Awesome! What's the best way to send it to you — text or email?"
-   - Text: "And what's the best cell number for that?"
-   - Email: "Great, what's your email address?" (Confirm spelling if needed).
+4. If they say yes: "Awesome! What's the best email address to send that to?"
+   - (Confirm spelling of email address letter by letter if needed).
 5. Close: "Perfect. I'll send that right over. Take a look and let me know what you think. Have a great day!"
 
 IMPORTANT:
-- Extract and save contact_method (text/email), contact_value (number/email), outcome (interested/not_interested/wrong_number/voicemail), and business_name (if they tell you).
+- Extract and save contact_method (email/none), contact_value (email address), outcome (interested/not_interested/wrong_number/voicemail), and business_name (if they tell you).
 - Remember, they are calling YOU. Do not act like you just dialed them.`;
 
 const inboundAssistant = {
@@ -76,7 +75,7 @@ const inboundAssistant = {
             type: "object",
             properties: {
                 outcome: { type: "string", enum: ["interested", "not_interested", "wrong_number", "voicemail"] },
-                contact_method: { type: "string", enum: ["email", "text", "none"] },
+                contact_method: { type: "string", enum: ["email", "none"] },
                 contact_value: { type: "string" },
                 business_name: { type: "string" },
             },

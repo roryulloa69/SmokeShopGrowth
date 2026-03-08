@@ -55,12 +55,11 @@ OBJECTIONS:
 - Not interested: End politely.
 
 COLLECTING CONTACT INFO:
-"What's the best way to send it — text or email?"
-- Text: "And what number should I send it to?" → Repeat the number back to confirm.
-- Email: "Perfect — what's the email address?" → Spell it back letter by letter to confirm.
+"Perfect. What's the best email address to send that to?"
+→ Spell the email address back letter by letter to confirm.
 
 CLOSE (after collecting):
-"Perfect. I'll send that over shortly so you can take a look. Thanks for the quick call — have a great day!"
+"Perfect. I'll send that over to you right now. Take your time looking it over, and let me know if you have any questions. Is there anything else I can help you with before I let you go?"
 
 POLITE GOODBYE (no interest):
 "Totally fine — appreciate your time. Have a great day!"
@@ -68,8 +67,9 @@ POLITE GOODBYE (no interest):
 IMPORTANT:
 - Never mention cost unless asked.
 - Never pressure anyone.
+- DO NOT rush to end the call once you get their info. Maintain a relaxed, conversational pace and give them a chance to ask questions.
 - If they ask to be removed from the list, say "Absolutely — sorry to bother you. Have a great day!" and end the call.
-- Extract and save: contact_method (text/email), contact_value (number/email), outcome (interested/not_interested/no_contact_info/no_answer/voicemail).`;
+- Extract and save: contact_method (email/none), contact_value (email address), outcome (interested/not_interested/no_contact_info/no_answer/voicemail).`;
 
 const assistantConfig = {
     name: "Smoke Shop Outbound Agent",
@@ -151,7 +151,7 @@ const assistantConfig = {
                 },
                 contact_method: {
                     type: "string",
-                    enum: ["email", "text", "none"],
+                    enum: ["email", "none"],
                 },
                 contact_value: {
                     type: "string",
