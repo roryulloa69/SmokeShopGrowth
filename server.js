@@ -18,6 +18,7 @@ const path = require('path');
 const fs = require('fs');
 const { google } = require('googleapis');
 const csv = require('csv-parser');
+const n8nService = require('./src/node/n8n_service');
 
 const rateLimit = require('express-rate-limit');
 
@@ -142,6 +143,8 @@ app.post('/api/run', (req, res) => {
         generateDemo,
         clients: [], // SSE subscribers
     });
+
+    n8nService.notifyPipelineEvent('started', { jobId, city, bizType });
 
     // Start pipeline asynchronously
     runPipeline(jobId).catch(err => {
@@ -385,6 +388,13 @@ async function runPipeline(jobId) {
     job.step = 5;
     pushLog(jobId, '🎉 Pipeline complete!', 'success');
     broadcast(jobId, { type: 'done', status: 'done', files: job.files });
+    
+    n8nService.notifyPipelineEvent('success', { 
+        jobId, 
+        city: job.city, 
+        bizType: job.bizType,
+        files: job.files 
+    });
 }
 
 // ──────────────────────────────────────────────
@@ -650,6 +660,10 @@ app.post('/api/submit-lead', webhookLimiter, async (req, res) => {
         }
 
         res.json({ success: true, message: 'Lead captured successfully' });
+        
+        n8nService.notifyNewLead({
+            contactName, email, phone, tier, businessName, city, submissionDate
+        });
     } catch (err) {
         console.error('Lead capture error:', err.message);
         res.status(500).json({ error: 'Failed to save lead' });
@@ -796,6 +810,19 @@ app.post('/webhook/vapi', async (req, res) => {
                 body: JSON.stringify(payload),
             }).catch(err => console.error('Zapier forward error:', err.message));
         }
+
+        // Forward to n8n
+        n8nService.notifyCallOutcome({
+            business_name,
+            phone,
+            city,
+            call_id,
+            duration_seconds: duration,
+            outcome,
+            summary,
+            email: collected_email,
+            timestamp: new Date().toISOString()
+        });
     } catch (err) {
         console.error('Vapi webhook processing error:', err.message);
     }
