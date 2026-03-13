@@ -42,12 +42,15 @@ const vapi = axios.create({
 // MAKE A SINGLE CALL
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function makeCall({ phone, name, city, leadId }) {
+async function makeCall({ phone, name, city, leadId, problem, rating, reviews }) {
     // Normalize phone to E.164
     const normalizedPhone = phone.replace(/\D/g, "");
     const e164 = normalizedPhone.startsWith("1")
         ? `+${normalizedPhone}`
         : `+1${normalizedPhone}`;
+
+    // Determine the website problem for personalization
+    const websiteProblem = problem || "no website";
 
     const payload = {
         assistantId: VAPI_ASSISTANT_ID,
@@ -62,6 +65,10 @@ async function makeCall({ phone, name, city, leadId }) {
             variableValues: {
                 business_name: name,
                 city: city || "Houston",
+                problem: websiteProblem,
+                reason: websiteProblem,
+                rating: rating || "",
+                reviews: reviews || "",
             },
         },
 
@@ -71,6 +78,9 @@ async function makeCall({ phone, name, city, leadId }) {
             business_name: name,
             phone: e164,
             city: city || "Houston",
+            problem: websiteProblem,
+            rating: rating || "",
+            reviews: reviews || "",
         },
     };
 
@@ -171,13 +181,15 @@ async function batchCall() {
     console.log(`📋 ${callable.length} callable leads (out of ${leads.length} total)`);
 
     if (isDryRun) {
-        console.log("\n🔍 DRY RUN — first 5 leads:");
-        callable.slice(0, 5).forEach((r, i) => {
-            const name = r.title || r.name || r.Name || "Unknown";
+        console.log("\n🔍 DRY RUN — first 10 leads:");
+        callable.slice(0, 10).forEach((r, i) => {
+            const name = r.business_name || r.title || r.name || r.Name || "Unknown";
             const phone = r.phone || r.Phone;
             const city = r.city || r.City || "Houston";
-            console.log(`  ${i + 1}. ${name} — ${phone} — ${city}`);
+            const reason = r.reason || "No website";
+            console.log(`  ${i + 1}. ${name} — ${phone} — ${city} — ${reason}`);
         });
+        console.log(`\n  ... ${callable.length} total leads ready to call`);
         return;
     }
 
@@ -188,15 +200,32 @@ async function batchCall() {
 
     for (let i = 0; i < callable.length; i++) {
         const row = callable[i];
-        const name = row.title || row.name || row.Name || "Unknown Shop";
+        const name = row.business_name || row.title || row.name || row.Name || "Unknown Shop";
         const phone = row.phone || row.Phone || row.telephone;
         const city = row.city || row.City || "Houston";
         const leadId = row.id || row.place_id || String(i);
+        const rating = row.rating || row.Rating || "";
+        const reviews = row.reviews || row.review_count || "";
+        const website = row.website || row.Website || "";
+        const reason = row.reason || "";
+
+        // Detect the website problem — use reason column if available, otherwise auto-detect
+        let problem = reason || "no website";
+        if (!reason && website && website.trim()) {
+            const httpStatus = row.http_status || row.status_code || row.website_status || "";
+            if (httpStatus && parseInt(httpStatus) >= 400) {
+                problem = "Broken website";
+            } else if (row.mobile_friendly === "no" || row.mobile_friendly === "false") {
+                problem = "website that isn't mobile-friendly";
+            } else {
+                problem = "website that could use an upgrade";
+            }
+        }
 
         process.stdout.write(`[${i + 1}/${callable.length}] ${name} (${phone})... `);
 
         try {
-            const call = await makeCall({ phone, name, city, leadId });
+            const call = await makeCall({ phone, name, city, leadId, problem, rating, reviews });
             console.log(`✅ ${call.id}`);
             succeeded++;
         } catch (err) {

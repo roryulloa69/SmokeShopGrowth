@@ -148,7 +148,7 @@ def create_checkout_session(lead_email, business_name, city, tier="growth"):
     tier: 'starter' | 'growth' | 'pro'
     """
     TIER_PRICES = {
-        "starter": {"setup": 19900, "name": "Starter Website"},
+        "starter": {"setup": 9900, "name": "Starter Website"},
         "growth":  {"setup": 29900, "name": "Growth Website"},
         "pro":     {"setup": 49900, "name": "Pro Website"},
     }

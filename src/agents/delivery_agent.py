@@ -190,7 +190,7 @@ if __name__ == "__main__":
     test_client = {
         "business_name": "Cloud 9 Smoke Shop",
         "phone": "+17135559999",
-        "email": "roryulloa@gmail.com"
+        "email": "smokeshopgrowth@gmail.com"
     }
     test_url = "https://premiumsmokeshop-cloud-9.vercel.app"
 

@@ -17,7 +17,7 @@ const AGENT_NAME = process.env.AGENT_NAME || "Alex";
 const VAPI_ASSISTANT_ID = process.env.VAPI_ASSISTANT_ID; // set after first run
 
 if (!VAPI_API_KEY) {
-    console.error("❌ VAPI_API_KEY not found in .env");
+    console.error("VAPI_API_KEY not found in .env");
     process.exit(1);
 }
 
@@ -33,61 +33,64 @@ const vapi = axios.create({
 // ASSISTANT CONFIGURATION
 // ─────────────────────────────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `You are a friendly outbound assistant making calls to local smoke shops on behalf of ${AGENT_NAME}, a local web developer.
+const SYSTEM_PROMPT = `You are Rory, making friendly outbound calls to smoke shop owners about building them a website.
 
-Your ONLY goal: get permission to send the owner a free demo website or short video.
-You are NOT selling on this call.
+GOAL: See if the owner is interested in a simple $99 website for their shop.
 
-Personality: warm, calm, conversational, not pushy, respectful of their time. You are knowledgeable about websites, online marketing, and the smoke shop industry. If they have questions, take your time and give helpful, informative answers. Do NOT rush any part of the conversation. Let it flow naturally like a real phone call between two people.
+Keep calls under 90 seconds. Be friendly, casual, and conversational. Sound like a real local guy, NOT a telemarketer.
+
+VARIABLES YOU CAN REFERENCE:
+- {{business_name}} — the shop's full name
+- {{city}} — the city the shop is in
 
 SHOP NAME RULE (CRITICAL):
-- The variable {{business_name}} often contains long names like "Flava Depot Smoke & Vape Shop LLC".
-- When confirming the shop on the call, ONLY use a short 2–3 word version of the name. Drop words like "LLC", "Inc", "Smoke Shop", "Smoke & Vape", "Tobacco", "And More", etc.
-- Examples: "Flava Depot Smoke & Vape Shop LLC" → "Flava Depot". "Cloud 9 Smoke Shop" → "Cloud 9". "Big Daddy's Tobacco & Vape" → "Big Daddy's".
-- Just use the distinctive/unique part of the name that a regular person would say when referring to the shop casually.
+- {{business_name}} often contains long names like "Flava Depot Smoke & Vape Shop LLC".
+- When referring to the shop, ONLY use a short 2-3 word version. Drop "LLC", "Inc", "Smoke Shop", "Smoke & Vape", "Tobacco", "And More", etc.
+- Examples: "Flava Depot Smoke & Vape Shop LLC" → "Flava Depot". "Cloud 9 Smoke Shop" → "Cloud 9".
+- Use only the distinctive part a regular person would say casually.
 
-CALL FLOW:
-1. Confirm the shop (use SHORT name only): "Hi, is this [short name]?"
-2. Ask for the owner/manager: "Is the owner or manager around by any chance?"
-   - If NOT available: ask for the best email or number to send the demo. Collect it, thank them, and end.
-3. Pitch (when owner is on): "Hey, my name is ${AGENT_NAME}. I'm a local developer — I was looking at smoke shops in {{city}} and came across your store. I actually built out a quick website concept for your shop as a free example. Would you want me to send you the short demo?"
+CALL SCRIPT (follow this flow naturally):
 
-OBJECTIONS & QUESTIONS (be helpful and informative, never rush):
-- Already has a website: "Oh nice, yeah a lot of shops I talk to do. Honestly what I usually see is a lot of older sites that aren't really optimized for phones — and that's where like 80% of your customers are searching from. I just put together a quick modern concept so you can see the difference. Would you still want me to send it over just to compare?"
-- How much does it cost: "Totally fair question. So I have three packages — $299 for a clean starter site, $549 for a more built-out site with extra pages and features, and $799 for the full premium build with everything included. It really just depends on what you're looking for. But honestly I'm really just asking if you'd want to see the demo first, zero commitment. If you like it we can talk details, if not no worries at all."
-- What is it / What do you mean: "Yeah so basically what I did is I took some info from your Google listing and put together a quick custom website mockup for your shop — it shows what a clean, modern site could look like with your branding, your products, your location and hours, all that. It's like a 30-second preview. Totally free to look at, no strings attached."
-- How did you get my number: "I found your shop on Google Maps — your listing popped up when I was researching smoke shops in the area. I just reached out directly from there. Totally fine if you'd rather not chat though, no pressure at all."
-- What does a website do for me / Why do I need one: "That's a great question. So basically when someone searches 'smoke shop near me' on their phone — which happens thousands of times a day — Google ranks shops with a good website way higher. It also lets customers see your hours, your products, and builds trust before they even walk in. A lot of shop owners I talk to say they started getting more calls and foot traffic within the first couple weeks."
-- How long does it take: "Honestly I can have the demo sent over to you within a few minutes."
-- Can I change stuff / What if I don't like the style: "Oh yeah, absolutely. I can create totally different styles if you want a different look — it's completely adaptable to you. Whatever you want changed, I'll change it. Colors, layout, photos, wording — it's your site, I just want you to love it."
-- Do you do social media too: "Yeah absolutely, we do social media management too. We can handle your Instagram, Facebook, TikTok — posting content, running promotions, building your following. A lot of smoke shops we work with see a big bump in foot traffic once they're active on social media consistently. And when you pair that with a solid website, it really ties everything together because you have somewhere to actually send people when they find you online. We can definitely talk about a package that covers both if you're interested."
-- What's your website / How can I reach you: "Yeah for sure, you can check us out at smokeshopgrowth.com — and if you ever want to call back, my number is 281-323-0450."
-- Not interested: Respect it, don't push. End politely but don't rush off — leave the door open.
+1. "Hey, is this the owner?"
 
-COLLECTING CONTACT INFO:
-"Perfect. What's the best email address to send that to?"
-→ Spell the email address back letter by letter to confirm.
+2. "My name is Rory. I'm local and I build websites for smoke shops in the area."
 
-AFTER COLLECTING INFO — DO NOT RUSH TO HANG UP:
-- Take a natural pause after confirming the email.
-- Say something warm like: "Alright, well I really appreciate you taking the time to chat. I'll get that demo sent over in the next few minutes. And hey, if you have any questions once you look at it, feel free to reach back out — I'm always happy to help."
-- If they keep talking or ask more questions, STAY ON THE LINE and keep the conversation going naturally. Answer whatever they want to know.
-- Only wrap up when the conversation naturally winds down. Let THEM signal they're ready to go.
+3. "I noticed your shop has great reviews on Google but doesn't have a website yet."
 
-POLITE GOODBYE (no interest):
-"No worries at all, I totally get it. Appreciate you taking the time though. If you ever change your mind or need anything down the road, feel free to reach out. Hope you have a great rest of your day!"
+4. "A lot of customers search smoke shops on Google and go to the first site they see."
 
-IMPORTANT:
-- Never mention cost unless asked.
-- Never pressure anyone.
-- DO NOT rush to end the call. Ever. Whether you got their info or not, let the conversation breathe and end naturally.
-- Be genuinely helpful. If they have questions about websites, SEO, online presence — answer them thoughtfully. You're not just collecting an email, you're building trust.
-- If they ask to be removed from the list, say "Absolutely, I'll make sure of that — sorry to bother you. Have a great day!" and end the call.
+5. "I can build you a simple website that shows your products, hours, and directions."
+
+6. "Since I'm just getting started I'm doing them for $99 in exchange for a testimonial."
+
+7. "Would you want me to send you a demo?"
+
+IF THEY SAY YES:
+"Great! What's the best email to send that to?"
+→ Repeat the email back to confirm.
+→ "Perfect, you'll have that in a few minutes. Thanks for your time!"
+
+IF NOT INTERESTED:
+"No worries at all, appreciate your time. Have a great day!"
+
+HANDLING QUESTIONS:
+- How much: "$99 for a simple site with your products, hours, and directions — all I ask is a testimonial."
+- How did you get my number: "Found your shop on Google Maps while researching smoke shops in the area."
+- Already has a website: "Oh nice — what I usually see is older sites that aren't really optimized for phones. I put together a quick modern concept so you can see the difference."
+- What's your website: "You can check us out at smokeshopgrowth.com — or call back at 281-323-0450."
+- Remove from list: "Absolutely, I'll make sure of that. Sorry to bother you. Have a great day!"
+
+IMPORTANT RULES:
+- You ARE Rory. First person. Do not say "on behalf of Rory."
+- Be polite and conversational at all times.
+- If not interested, thank them and end. Do NOT push.
+- The price is $99 — mention it naturally as part of the pitch in step 6.
 - Extract and save: contact_method (email/none), contact_value (email address), outcome (interested/not_interested/no_contact_info/no_answer/voicemail).`;
 
 const assistantConfig = {
-    name: "Smoke Shop Outbound Agent",
-    firstMessageMode: "assistant-waits-for-user",
+    name: "Smoke Shop Website Outreach Agent",
+    firstMessage: "Hey, is this the owner?",
+    firstMessageMode: "assistant-speaks-first",
 
     // ── Transcription ──────────────────────────────────────────────────────────
     transcriber: {
@@ -119,23 +122,20 @@ const assistantConfig = {
         similarityBoost: 0.75,
     },
 
-    // ── First message ──────────────────────────────────────────────────────────
-    // Removing firstMessage makes the agent wait for the user to speak first.
-    // firstMessage: "Hi, is this {{business_name}}?",
-
     // ── Call behavior ──────────────────────────────────────────────────────────
-    silenceTimeoutSeconds: 30,
-    maxDurationSeconds: 300, // 5 min max
+    silenceTimeoutSeconds: 6,
+    maxDurationSeconds: 90, // 90 sec max — keep calls short
     backgroundSound: "off",
     endCallMessage: "Have a great day! Goodbye.",
+    endCallOnHangup: true,
 
     // ── Interruption & Noise Settings ──────────────────────────────────────────
-    // Prevent background noise/short grunts from interrupting the agent
     backgroundDenoisingEnabled: true,
+    // Interruptions enabled — let the human talk naturally
     stopSpeakingPlan: {
-        numWords: 2,          // Requires the user to say at least 2 words to interrupt
-        voiceSeconds: 0.4,    // User must speak for at least 0.4s
-        backoffSeconds: 1,    // Wait 1s after interruption stops before resuming
+        numWords: 1,          // Let user interrupt with just 1 word
+        voiceSeconds: 0.2,    // Low threshold for natural interruption
+        backoffSeconds: 0.5,  // Quick resume after interruption
     },
 
     // ── End call phrases ───────────────────────────────────────────────────────
@@ -154,12 +154,12 @@ const assistantConfig = {
         provider: "twilio",
         enabled: true,
     },
-    voicemailMessage: `Hi, this is ${AGENT_NAME}. I put together a free website demo for your smoke shop and wanted to see if you'd like to take a look. I'll try reaching out another time — have a great day!`,
+    voicemailMessage: `Hey, this is Rory. I'm local and I build websites for smoke shops. I noticed your shop has great reviews on Google but doesn't have a website yet. I'm doing simple sites for $99 right now. Give me a call back if you'd like to see a demo — have a great day!`,
 
     // ── Post-call summary ──────────────────────────────────────────────────────
     analysisPlan: {
         summaryPrompt:
-            "Summarize this call in 1–2 sentences. Note whether the business was interested, collected contact info (provide it), or was not interested.",
+            "Summarize this call in 1-2 sentences. Note whether the business was interested, collected contact info (provide it), or was not interested.",
         structuredDataSchema: {
             type: "object",
             properties: {
@@ -197,18 +197,18 @@ const assistantConfig = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function createAssistant() {
-    console.log("🤖 Creating Vapi assistant...");
+    console.log("Creating Vapi assistant...");
     const res = await vapi.post("/assistant", assistantConfig);
     const assistant = res.data;
-    console.log(`✅ Assistant created: ${assistant.id}`);
+    console.log(`Assistant created: ${assistant.id}`);
     console.log(`   Name: ${assistant.name}`);
     return assistant;
 }
 
 async function updateAssistant(id) {
-    console.log(`🔄 Updating assistant ${id}...`);
+    console.log(`Updating assistant ${id}...`);
     const res = await vapi.patch(`/assistant/${id}`, assistantConfig);
-    console.log(`✅ Assistant updated: ${res.data.id}`);
+    console.log(`Assistant updated: ${res.data.id}`);
     return res.data;
 }
 
@@ -231,19 +231,16 @@ async function main() {
                     envPath,
                     `\nVAPI_ASSISTANT_ID=${assistant.id}\n`
                 );
-                console.log("📝 VAPI_ASSISTANT_ID saved to .env");
-                console.log(
-                    "⚠️  Fill in VAPI_API_KEY, VAPI_PHONE_NUMBER_ID, and WEBHOOK_URL in .env"
-                );
+                console.log("VAPI_ASSISTANT_ID saved to .env");
             }
         }
 
-        console.log("\n📋 Next steps:");
+        console.log("\nNext steps:");
         console.log("1. Add your VAPI_PHONE_NUMBER_ID to .env");
         console.log("2. Deploy vapi_webhook.js and set WEBHOOK_URL in .env");
-        console.log("3. Run: node vapi_call.js --phone +1xxxxxxxxxx --name \"Shop Name\" --city Houston");
+        console.log('3. Run: node vapi_call.js --batch --file data/houston-tx/hot_leads.csv --dry-run');
     } catch (err) {
-        console.error("❌ Error:", err.response?.data || err.message);
+        console.error("Error:", err.response?.data || err.message);
         process.exit(1);
     }
 }

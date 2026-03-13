@@ -238,6 +238,34 @@ app.get('/api/jobs', (req, res) => {
 });
 
 // ──────────────────────────────────────────────
+// Route: CRM lead capture webhook
+// Called by Vapi webhook when email is collected
+// ──────────────────────────────────────────────
+app.post('/api/lead', webhookLimiter, (req, res) => {
+    const { name, email, phone, city, outcome } = req.body;
+    if (!email) return res.status(400).json({ error: 'email is required' });
+
+    const lead = {
+        name: name || 'Unknown',
+        email,
+        phone: phone || '',
+        city: city || '',
+        outcome: outcome || 'interested',
+        captured_at: new Date().toISOString(),
+    };
+
+    // Append to leads log
+    const leadsLogPath = path.join('logs', 'captured_leads.jsonl');
+    fs.mkdirSync('logs', { recursive: true });
+    fs.appendFileSync(leadsLogPath, JSON.stringify(lead) + '\n');
+
+    console.log(`New lead captured: ${lead.name} — ${lead.email}`);
+    n8nService.notifyLeadCapture(lead);
+
+    res.json({ ok: true, lead });
+});
+
+// ──────────────────────────────────────────────
 // Route: Zapier webhook → trigger ElevenLabs call
 // ──────────────────────────────────────────────
 // Zapier POSTs: { business_name, phone, city, agent_name? }
@@ -968,7 +996,7 @@ app.post('/api/create-checkout', webhookLimiter, async (req, res) => {
     }
 
     const TIER_PRICES = {
-        starter: { setup: 19900, name: 'Starter Website' },
+        starter: { setup: 9900, name: 'Starter Website' },
         growth: { setup: 29900, name: 'Growth Website' },
         pro: { setup: 49900, name: 'Pro Website' },
     };
@@ -1108,6 +1136,173 @@ app.get('/api/template-submissions', (req, res) => {
         count: templateSubmissions.length,
         submissions: templateSubmissions
     });
+});
+
+// ──────────────────────────────────────────────
+// Stripe Webhook — handles checkout.session.completed
+// Triggers: CRM update → site deployment → delivery email
+// ──────────────────────────────────────────────
+app.post('/webhook/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+    const stripeKey = process.env.STRIPE_API_KEY;
+    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+    if (!stripeKey) {
+        console.error('STRIPE_API_KEY not set');
+        return res.status(500).send('Stripe not configured');
+    }
+
+    const stripe = require('stripe')(stripeKey);
+    let event;
+
+    // Verify webhook signature if secret is configured
+    if (endpointSecret) {
+        const sig = req.headers['stripe-signature'];
+        try {
+            event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+        } catch (err) {
+            console.error('Stripe webhook signature failed:', err.message);
+            return res.status(400).send(`Webhook Error: ${err.message}`);
+        }
+    } else {
+        // No secret configured — parse raw body
+        try {
+            event = JSON.parse(req.body);
+        } catch (err) {
+            return res.status(400).send('Invalid JSON');
+        }
+    }
+
+    if (event.type === 'checkout.session.completed') {
+        const session = event.data.object;
+        const email = session.customer_details?.email || session.customer_email || '';
+        const amount = (session.amount_total || 0) / 100;
+        const refId = session.client_reference_id || '';
+        const meta = session.metadata || {};
+        const businessName = meta.business_name || refId.split('|')[0] || 'Smoke Shop';
+        const city = meta.city || refId.split('|')[1] || '';
+        const tier = meta.tier || 'starter';
+
+        console.log(`\n[STRIPE] Payment received!`);
+        console.log(`  Customer: ${email}`);
+        console.log(`  Amount: $${amount}`);
+        console.log(`  Business: ${businessName} (${city})`);
+        console.log(`  Tier: ${tier}`);
+
+        // 1. Log the payment
+        const paymentLog = {
+            email, amount, businessName, city, tier, refId,
+            paid_at: new Date().toISOString(),
+        };
+        fs.mkdirSync('logs', { recursive: true });
+        fs.appendFileSync(
+            path.join('logs', 'payments.jsonl'),
+            JSON.stringify(paymentLog) + '\n'
+        );
+
+        // 2. Deploy site (generate from template to deployments folder)
+        try {
+            const deployRoot = path.join(__dirname, 'deployments');
+            if (!fs.existsSync(deployRoot)) fs.mkdirSync(deployRoot);
+
+            const slug = businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+            const projectPath = path.join(deployRoot, `shop-${slug}`);
+            if (!fs.existsSync(projectPath)) fs.mkdirSync(projectPath, { recursive: true });
+
+            // Copy template and inject config
+            const templateHtml = fs.readFileSync(path.join(__dirname, 'template', 'index.html'), 'utf-8');
+            const templateCss = path.join(__dirname, 'template', 'styles.css');
+            const templateAnimations = path.join(__dirname, 'template', 'animations.js');
+
+            // Generate personalized config.js
+            const shopConfig = `window.BUSINESS = ${JSON.stringify({
+                name: businessName,
+                city: city,
+                phone: '',
+                address: city,
+                hours: 'Open Daily',
+                instagram: '#',
+                googleMaps: 'https://maps.google.com/?q=' + encodeURIComponent(businessName + ' ' + city),
+                categories: ['Vapes', 'CBD', 'Kratom', 'Hookah', 'Delta-8', 'Glass Pipes', 'Cigars'],
+                testimonials: [
+                    { name: 'Customer', role: 'Regular', stars: 5, quote: 'Great shop, great products!' }
+                ],
+                showDemoBanner: false,
+            }, null, 2)};`;
+
+            fs.writeFileSync(path.join(projectPath, 'index.html'), templateHtml);
+            fs.writeFileSync(path.join(projectPath, 'config.js'), shopConfig);
+            if (fs.existsSync(templateCss)) fs.copyFileSync(templateCss, path.join(projectPath, 'styles.css'));
+            if (fs.existsSync(templateAnimations)) fs.copyFileSync(templateAnimations, path.join(projectPath, 'animations.js'));
+
+            const liveUrl = `/deployments/shop-${slug}/index.html`;
+            console.log(`[DEPLOY] Site generated: ${liveUrl}`);
+
+            // 3. Send delivery email with live URL + payment confirmation
+            if (email && process.env.SMTP_USER && process.env.SMTP_PASS) {
+                const nodemailer = require('nodemailer');
+                const transporter = nodemailer.createTransport({
+                    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+                    port: parseInt(process.env.SMTP_PORT || '587', 10),
+                    secure: false,
+                    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+                });
+
+                const serverBase = process.env.PUBLIC_URL || process.env.DEMO_BASE_URL || `http://localhost:${PORT}`;
+                const fullUrl = serverBase + liveUrl;
+
+                await transporter.sendMail({
+                    from: `"SmokeShopGrowth" <${process.env.SMTP_USER}>`,
+                    to: email,
+                    subject: `Your website is live! — ${businessName}`,
+                    html: `
+                        <div style="font-family:sans-serif;max-width:580px;margin:0 auto;padding:40px 24px;background:#0a0a0a;color:#fff;">
+                            <h1 style="color:#39ff14;font-size:1.5rem;">Your website is live!</h1>
+                            <p style="color:#ccc;line-height:1.7;">Hey ${businessName},</p>
+                            <p style="color:#ccc;line-height:1.7;">Thanks for your payment! Your new website has been generated and is ready to view:</p>
+                            <div style="text-align:center;margin:32px 0;">
+                                <a href="${fullUrl}" style="display:inline-block;background:linear-gradient(90deg,#00f0ff,#39ff14);color:#000;font-weight:700;padding:14px 36px;border-radius:999px;font-size:1.1rem;text-decoration:none;">View Your Live Website</a>
+                            </div>
+                            <p style="color:#aaa;font-size:.9rem;line-height:1.7;">
+                                We'll be setting up your custom domain and making any tweaks you need. Just reply to this email with any changes you'd like.
+                            </p>
+                            <hr style="border:none;border-top:1px solid #222;margin:32px 0;" />
+                            <p style="color:#666;font-size:.82rem;">SmokeShopGrowth • 281-323-0450<br/>Questions? Just reply to this email.</p>
+                        </div>`,
+                    text: `Hey ${businessName}! Your website is live: ${fullUrl}\n\nReply with any changes. — SmokeShopGrowth`,
+                });
+                console.log(`[DELIVERY] Email sent to ${email} with live URL`);
+            }
+
+            // 4. Notify admin
+            if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+                const nodemailer = require('nodemailer');
+                const transporter = nodemailer.createTransport({
+                    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+                    port: parseInt(process.env.SMTP_PORT || '587', 10),
+                    secure: false,
+                    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+                });
+                await transporter.sendMail({
+                    from: `"Payment Alert" <${process.env.SMTP_USER}>`,
+                    to: process.env.SMTP_USER,
+                    subject: `$${amount} PAID — ${businessName} (${tier})`,
+                    text: `Payment received!\n\nBusiness: ${businessName}\nEmail: ${email}\nAmount: $${amount}\nTier: ${tier}\nCity: ${city}\nSite: /deployments/shop-${slug}/index.html`,
+                });
+            }
+
+            n8nService.notifyPipelineEvent('payment_received', { email, businessName, city, tier, amount });
+
+        } catch (deployErr) {
+            console.error('[DEPLOY] Failed:', deployErr.message);
+            // Log failed deployment for retry
+            fs.appendFileSync(
+                path.join('logs', 'failed_deploys.jsonl'),
+                JSON.stringify({ email, businessName, city, tier, error: deployErr.message, ts: new Date().toISOString() }) + '\n'
+            );
+        }
+    }
+
+    res.json({ received: true });
 });
 
 // ──────────────────────────────────────────────
