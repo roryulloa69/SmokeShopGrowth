@@ -4,29 +4,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{BUSINESS_NAME}} Depot — Premium Cannabis Dispensary</title>
+  <title>{{BUSINESS_NAME}} — Premium Smoke Shop · {{CITY}}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link
-    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@300;400;500;600&family=Inter:wght@300;400;500&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap"
     rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
   <style>
     :root {
-      --purple: #7b2fbf;
+      --purple: #bc13fe;
       --purple-d: #5a1a8a;
-      --purple-l: #a050e0;
-      --green: #4caf2a;
-      --green-d: #2e7a10;
-      --green-l: #6fd43e;
+      --purple-l: #d880ff;
+      --green: #39ff14;
+      --green-d: #1e7a00;
+      --green-l: #a2ff8a;
       --gold: #d4a520;
       --gold-l: #f5c842;
-      --bg: #0e0812;
-      --bg2: #160d1e;
-      --bg3: #1d1028;
+      --bg: #07040a;
+      --bg2: #0e0a16;
+      --bg3: #160d24;
       --text: #f0ebf8;
-      --text-dim: rgba(240, 235, 248, 0.55);
-      --border: rgba(123, 47, 191, 0.2);
+      --text-dim: rgba(240, 235, 248, 0.6);
+      --border: rgba(188, 19, 254, 0.15);
+      --glass: rgba(14, 10, 22, 0.75);
     }
 
     *,
@@ -47,10 +48,22 @@
       font-family: 'Inter', sans-serif;
       font-weight: 300;
       overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* TEXTURE OVERLAY */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+      opacity: 0.04;
+      pointer-events: none;
+      z-index: 9999;
     }
 
     ::-webkit-scrollbar {
-      width: 4px;
+      width: 5px;
     }
 
     ::-webkit-scrollbar-track {
@@ -59,7 +72,7 @@
 
     ::-webkit-scrollbar-thumb {
       background: var(--purple);
-      border-radius: 2px;
+      border-radius: 10px;
     }
 
     /* AGE GATE */
@@ -67,6 +80,7 @@
       position: fixed;
       inset: 0;
       background: var(--bg);
+      background-image: radial-gradient(circle at 50% 50%, rgba(90, 26, 138, 0.15), transparent 70%);
       z-index: 1000;
       display: flex;
       align-items: center;
@@ -83,12 +97,12 @@
       margin-bottom: .5rem;
     }
 
-    .ag-flava {
+    .ag-line1 {
       color: var(--purple-l);
       -webkit-text-stroke: 2px var(--purple-d);
     }
 
-    .ag-depot {
+    .ag-line2 {
       color: var(--green-l);
       -webkit-text-stroke: 2px var(--green-d);
     }
@@ -180,47 +194,6 @@
       line-height: 1.8;
     }
 
-    /* UTIL */
-    .ml-auto {
-      margin-left: auto;
-    }
-
-    .mt-3 {
-      margin-top: 3px;
-    }
-
-    .menu-desc {
-      font-size: .8rem;
-      color: var(--text-dim);
-      margin-top: .5rem;
-      font-style: italic;
-    }
-
-    .menu-bottom {
-      text-align: center;
-      margin-top: 3rem;
-    }
-
-    .eyebrow-center {
-      justify-content: center;
-      margin-bottom: 1rem;
-    }
-
-    .txt-purple {
-      color: var(--purple-l);
-    }
-
-    .txt-green {
-      color: var(--green-l);
-    }
-
-    .vr-inner {
-      width: 100%;
-      max-width: 360px;
-      position: relative;
-      z-index: 1;
-    }
-
     /* NAV */
     nav {
       position: fixed;
@@ -236,10 +209,10 @@
     }
 
     nav.scrolled {
-      background: rgba(14, 8, 18, .95);
-      -webkit-backdrop-filter: blur(16px);
-      backdrop-filter: blur(16px);
-      padding: 1rem 5vw;
+      background: var(--glass);
+      -webkit-backdrop-filter: blur(24px);
+      backdrop-filter: blur(24px);
+      padding: 0.8rem 5vw;
       border-bottom: 1px solid var(--border);
     }
 
@@ -330,6 +303,7 @@
       padding: 10rem 5vw 6rem;
       position: relative;
       overflow: hidden;
+      background: var(--bg);
     }
 
     .hero-glow {
@@ -337,17 +311,61 @@
       inset: 0;
       pointer-events: none;
       background:
-        radial-gradient(ellipse 60% 50% at 50% 30%, rgba(123, 47, 191, .2) 0%, transparent 70%),
-        radial-gradient(ellipse 40% 30% at 20% 80%, rgba(76, 175, 42, .1) 0%, transparent 60%),
-        radial-gradient(ellipse 30% 40% at 80% 70%, rgba(76, 175, 42, .08) 0%, transparent 60%);
+        radial-gradient(ellipse 70% 60% at 50% 30%, rgba(188, 19, 254, 0.12) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 40% at 10% 90%, rgba(57, 255, 20, 0.06) 0%, transparent 60%);
+      z-index: 1;
+    }
+
+    .hero-bg-overlay {
+      position: absolute;
+      inset: 0;
+      background: url('luxury_smoke_shop_hero_bg.png') center/cover no-repeat;
+      opacity: 0.15;
+      mix-blend-mode: screen;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ORBS */
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      z-index: 1;
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    .orb-1 {
+      width: 400px;
+      height: 400px;
+      background: var(--purple-d);
+      top: -100px;
+      left: -100px;
+      animation: float 20s infinite alternate;
+    }
+
+    .orb-2 {
+      width: 300px;
+      height: 300px;
+      background: var(--green-d);
+      bottom: 20%;
+      right: -50px;
+      animation: float 15s infinite alternate-reverse;
+    }
+
+    @keyframes float {
+      from { transform: translate(0, 0) scale(1); }
+      to { transform: translate(50px, 30px) scale(1.1); }
     }
 
     .hero-grid {
       position: absolute;
       inset: 0;
       pointer-events: none;
-      background-image: linear-gradient(rgba(123, 47, 191, .04) 1px, transparent 1px), linear-gradient(90deg, rgba(123, 47, 191, .04) 1px, transparent 1px);
-      background-size: 60px 60px;
+      background-image: linear-gradient(rgba(188, 19, 254, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(188, 19, 254, 0.03) 1px, transparent 1px);
+      background-size: 80px 80px;
+      z-index: 2;
     }
 
     .hero-badge {
@@ -493,6 +511,36 @@
     .btn-ol:hover {
       border-color: var(--purple-l);
       color: var(--text);
+      background: rgba(188, 19, 254, 0.05);
+    }
+
+    /* FLOATING CHAT */
+    .chat-bubble {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, var(--purple), var(--purple-l));
+      border-radius: 50%;
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 30px rgba(188, 19, 254, 0.4);
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .chat-bubble:hover {
+      transform: scale(1.1) rotate(5deg);
+      box-shadow: 0 15px 40px rgba(188, 19, 254, 0.6);
+    }
+
+    .chat-bubble svg {
+      width: 24px;
+      height: 24px;
+      fill: #fff;
     }
 
     .scroll-ind {
@@ -732,15 +780,12 @@
     }
 
     .bud-img {
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 40% 40%, rgba(123, 47, 191, .3), rgba(22, 13, 30, .8));
-      border: 2px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2.5rem;
+      width: 140px;
+      height: 140px;
+      border-radius: 12px;
+      background: url('premium_vape_lifestyle.png') center/cover no-repeat;
+      border: 1px solid var(--border);
+      box-shadow: 0 0 20px rgba(188, 19, 254, 0.2);
       flex-shrink: 0;
     }
 
@@ -1089,7 +1134,7 @@
     }
 
     .vr::before {
-      content:'{{BUSINESS_NAME}}';
+      content: attr(data-initials);
       position: absolute;
       right: -2vw;
       top: 50%;
@@ -1149,6 +1194,42 @@
       margin-left: .5rem;
     }
 
+    .menu-top-desc {
+      font-size: .8rem;
+      color: var(--text-dim);
+      margin-top: .5rem;
+      font-style: italic;
+    }
+
+    .sig-bar.sig-bar-wrap {
+      margin-top: 3px;
+    }
+
+    .menu-bottom-btn {
+      text-align: center;
+      margin-top: 3rem;
+    }
+
+    .eyebrow.exp-eyebrow {
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+
+    .exph-p {
+      color: var(--purple-l);
+    }
+
+    .exph-g {
+      color: var(--green-l);
+    }
+
+    .store-hours-wrap {
+      width: 100%;
+      max-width: 360px;
+      position: relative;
+      z-index: 1;
+    }
+
     /* FOOTER */
     footer {
       border-top: 1px solid var(--border);
@@ -1159,8 +1240,6 @@
       flex-wrap: wrap;
       gap: 2rem;
     }
-
-    .fbrand {}
 
     .fbrand-name {
       font-family: 'Bebas Neue', sans-serif;
@@ -1279,33 +1358,34 @@
   <!-- AGE GATE -->
   <div id="age-gate">
     <div class="ag-name">
-      <div class="ag-flava">{{BUSINESS_NAME}}</div>
-      <div class="ag-depot">Depot</div>
+      <div class="ag-line1">{{BUSINESS_LINE1}}</div>
+      <div class="ag-line2">{{BUSINESS_LINE2}}</div>
     </div>
-    <div class="ag-sub">Premium Cannabis Dispensary</div>
+    <div class="ag-sub">Premium Smoke Shop · {{CITY}}</div>
     <div class="ag-divider"></div>
-    <div class="ag-q">Are you 21 or older?</div>
+    <div class="ag-q">Are you 18 or older?</div>
     <div class="ag-note">You must be of legal age to enter this site</div>
     <div class="ag-btns">
       <button class="ag-btn ag-yes" onclick="enterSite()">Yes, Enter</button>
       <button class="ag-btn ag-no" onclick="window.location.href='https://www.google.com'">No, Exit</button>
     </div>
-    <p class="ag-disc">By entering you agree to our Terms of Service. Cannabis products have not been evaluated by the
-      FDA. For use by adults 21+ only where legal. Do not drive or operate machinery while under the influence.</p>
+    <p class="ag-disc">By entering you agree to our Terms of Service. Products are for use by adults 18+ only.
+      Please consume responsibly.</p>
   </div>
 
   <!-- NAV -->
   <nav id="nav">
     <a class="nav-brand" href="#">
-      <span class="nf">{{BUSINESS_NAME}}</span>
-      <span class="nd">Depot</span>
+      <span class="nf">{{BUSINESS_LINE1}}</span>
+      <span class="nd">{{BUSINESS_LINE2}}</span>
     </a>
     <ul class="nav-links">
-      <li><a href="#featured">Menu</a></li>
+      <li><a href="#featured">Products</a></li>
       <li><a href="#experience">About</a></li>
       <li><a href="#visit">Visit</a></li>
+      <li><a href="#pricing" style="color:var(--green);">Get Started</a></li>
     </ul>
-    <a class="nav-ig" href="https://instagram.com/{{INSTAGRAM}}" target="_blank" rel="noopener">
+    <a class="nav-ig" href="https://instagram.com/{{INSTAGRAM}}" target="_blank" rel="noopener noreferrer">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <rect x="2" y="2" width="20" height="20" rx="5" />
         <circle cx="12" cy="12" r="5" />
@@ -1315,22 +1395,28 @@
     </a>
   </nav>
 
+  <!-- THEME ELEMENTS -->
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
   <!-- HERO -->
   <section id="hero">
+    <div class="hero-bg-overlay"></div>
     <div class="hero-glow"></div>
     <div class="hero-grid"></div>
     <div class="hero-badge">
       <div class="blink"></div>Live Inventory · Open Today
     </div>
     <h1 class="hero-title">
-      <span class="ht-f">{{BUSINESS_NAME}}</span>
-      <span class="ht-d">Depot</span>
+      <span class="ht-f">{{BUSINESS_LINE1}}</span>
+      <span class="ht-d">{{BUSINESS_LINE2}}</span>
     </h1>
-    <p class="hero-tag">Premium Cannabis Dispensary &nbsp;·&nbsp; <span>Lab-Tested Quality</span></p>
+    <p class="hero-tag">Premium Smoke Shop &nbsp;·&nbsp; <span>{{CITY}}</span></p>
     <div class="hero-acts">
-      <a href="#featured" class="btn-pu">View Menu</a>
+      <a href="#featured" class="btn-pu">View Products</a>
       <a href="#visit" class="btn-gr">Find Us</a>
-      <a href="https://instagram.com/{{INSTAGRAM}}" class="btn-ol" target="_blank" rel="noopener">@{{INSTAGRAM}}</a>
+      <a href="https://instagram.com/{{INSTAGRAM}}" class="btn-ol" target="_blank"
+        rel="noopener noreferrer">@{{INSTAGRAM}}</a>
     </div>
     <div class="scroll-ind">
       <div class="scroll-line"></div>
@@ -1342,85 +1428,84 @@
   <div class="hours-bar">
     <div class="hb-label">Store Hours</div>
     <div class="hb-div"></div>
-    <div class="hb-times">{{HOURS}}</div>
-    <div class="hb-right ml-auto">📍 Premium Cannabis Dispensary</div>
+    <div class="hb-times">Mon – Sat &nbsp; 10:00 AM – 9:00 PM &nbsp;&nbsp;|&nbsp;&nbsp; Sunday &nbsp; 11:00 AM – 7:00 PM
+    </div>
+    <div class="hb-right">📍 {{CITY}}</div>
   </div>
 
   <!-- MARQUEE -->
   <div class="mqw">
     <div class="mq-track">
-      <span class="mq-item">Flower</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Indica</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Sativa</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Hybrid</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Concentrates</span><span class="mq-item mq-gem">✦</span>
       <span class="mq-item">Vapes</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Edibles</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Pre-Rolls</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Lab-Tested</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Flower</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Indica</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Sativa</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Hybrid</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Concentrates</span><span class="mq-item mq-gem">✦</span>
+      <span class="mq-item">Glass</span><span class="mq-item mq-gem">✦</span>
+      <span class="mq-item">Wraps</span><span class="mq-item mq-gem">✦</span>
+      <span class="mq-item">Delta 8</span><span class="mq-item mq-gem">✦</span>
+      <span class="mq-item">CBD</span><span class="mq-item mq-gem">✦</span>
+      <span class="mq-item">Hookah</span><span class="mq-item mq-gem">✦</span>
+      <span class="mq-item">Accessories</span><span class="mq-item mq-gem">✦</span>
+      <span class="mq-item">Kratom</span><span class="mq-item mq-gem">✦</span>
       <span class="mq-item">Vapes</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Edibles</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Pre-Rolls</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Lab-Tested</span><span class="mq-item mq-gem">✦</span>
+      <span class="mq-item">Glass</span><span class="mq-item mq-gem">✦</span>
+      <span class="mq-item">Wraps</span><span class="mq-item mq-gem">✦</span>
+      <span class="mq-item">Delta 8</span><span class="mq-item mq-gem">✦</span>
+      <span class="mq-item">CBD</span><span class="mq-item mq-gem">✦</span>
+      <span class="mq-item">Hookah</span><span class="mq-item mq-gem">✦</span>
+      <span class="mq-item">Accessories</span><span class="mq-item mq-gem">✦</span>
+      <span class="mq-item">Kratom</span><span class="mq-item mq-gem">✦</span>
     </div>
   </div>
 
-  <!-- MENU -->
+  <!-- MENU / PRODUCTS -->
   <section id="featured">
     <div class="menu-top">
       <div>
         <div class="eyebrow">
-          <div class="ey-dot"></div>Live Inventory
+          <div class="ey-dot"></div>Top Sellers
         </div>
         <div class="menu-h">
-          <div class="hp">Flower</div>
+          <div class="hp">Product</div>
           <div class="hg">Menu</div>
         </div>
-        <div class="menu-desc">Fresh, lab-tested cannabis flower. All prices per gram.</div>
+        <div class="menu-top-desc">Premium smoke shop products. Best brands, best prices.</div>
       </div>
       <div class="filter-row">
         <button class="fbtn active">All</button>
-        <button class="fbtn">Indica</button>
-        <button class="fbtn">Sativa</button>
-        <button class="fbtn">Hybrid</button>
+        <button class="fbtn">Vapes</button>
+        <button class="fbtn">Glass</button>
+        <button class="fbtn">CBD</button>
       </div>
     </div>
 
-    <!-- Budget Pick -->
+    <!-- Featured Product -->
     <div class="budget-card">
-      <div class="bud-img">🌿</div>
+      <div class="bud-img">💨</div>
       <div>
-        <div class="bud-name">King Louis OG</div>
-        <div class="bud-type">Indica · Premium Flower</div>
-        <div class="bud-price">$3.00 / gram</div>
+        <div class="bud-name">Elf Bar BC5000</div>
+        <div class="bud-type">Disposable Vape · Best Seller</div>
+        <div class="bud-price">$14.99</div>
         <div class="bud-details">
           <div>
-            <div class="d-label">Positive Effects</div>
+            <div class="d-label">Flavors</div>
             <ul class="d-list">
-              <li>Sleepy</li>
-              <li>Relaxed</li>
-              <li>Hungry</li>
+              <li>Blue Razz Ice</li>
+              <li>Watermelon</li>
+              <li>Peach Mango</li>
             </ul>
           </div>
           <div>
-            <div class="d-label">Helps With</div>
+            <div class="d-label">Specs</div>
             <ul class="d-list">
-              <li>Anxiety</li>
-              <li>Insomnia</li>
-              <li>Stress</li>
+              <li>5000 puffs</li>
+              <li>5% nicotine</li>
+              <li>Rechargeable</li>
             </ul>
           </div>
           <div>
-            <div class="d-label">Side Effects</div>
-            <ul class="d-list d-neg">
-              <li>Dry mouth</li>
-              <li>Dry eyes</li>
-              <li>Dizzy</li>
+            <div class="d-label">Features</div>
+            <ul class="d-list">
+              <li>Pre-filled</li>
+              <li>Draw-activated</li>
+              <li>USB-C charge</li>
             </ul>
           </div>
         </div>
@@ -1428,79 +1513,76 @@
     </div>
 
     <!-- Signature Bar -->
-    <div class="sig-bar mt-3">
-      <span class="sig-bar-title">Signature $5 Strains</span>
-      <span class="sig-bar-sub">— All $5.00 / gram</span>
+    <div class="sig-bar sig-bar-wrap">
+      <span class="sig-bar-title">Popular Products</span>
+      <span class="sig-bar-sub">— Always in stock</span>
     </div>
 
     <div class="pgrid">
       <div class="pcard">
-        <div class="ptier ts">Signature</div>
-        <div class="pname">Hard Candy</div>
-        <div class="psub">Indica · High THC</div>
-        <div class="pprice">$5.00</div>
-        <div class="punit">per gram</div>
+        <div class="ptier ts">Vapes</div>
+        <div class="pname">Geek Bar Pulse</div>
+        <div class="psub">Disposable · 15000 Puffs</div>
+        <div class="pprice">$19.99</div>
+        <div class="punit">per unit</div>
         <div class="peffects">
-          <span class="etag">Energetic</span>
-          <span class="etag">Euphoric</span>
-          <span class="etag">Vanilla</span>
-          <span class="etag">Honey</span>
-          <span class="etag eneg">Dry mouth</span>
-          <span class="etag eneg">Dizzy</span>
+          <span class="etag">15000 Puffs</span>
+          <span class="etag">Rechargeable</span>
+          <span class="etag">20+ Flavors</span>
+          <span class="etag eneg">5% Nic</span>
         </div>
       </div>
 
       <div class="pcard">
-        <div class="ptier ts">Signature</div>
-        <div class="pname">Blue Nerds</div>
-        <div class="psub">Hybrid (50/50)</div>
-        <div class="pprice">$5.00</div>
-        <div class="punit">per gram</div>
+        <div class="ptier tp">Glass</div>
+        <div class="pname">8" Beaker Bong</div>
+        <div class="psub">Borosilicate Glass · Ice Catcher</div>
+        <div class="pprice">$24.99</div>
+        <div class="punit">per piece</div>
         <div class="peffects">
-          <span class="etag">Focused</span>
-          <span class="etag">Relaxed</span>
-          <span class="etag">Euphoric</span>
-          <span class="etag">Helps: Pain</span>
-          <span class="etag eneg">Dry mouth</span>
-          <span class="etag eneg">Headache</span>
+          <span class="etag">Ice Catcher</span>
+          <span class="etag">Thick Glass</span>
+          <span class="etag">Easy Clean</span>
         </div>
       </div>
 
       <div class="pcard">
-        <div class="ptier ts">Signature</div>
-        <div class="pname">Obama Runtz</div>
-        <div class="psub">Hybrid · THC &lt;29%</div>
-        <div class="pprice">$5.00</div>
-        <div class="punit">per gram</div>
+        <div class="ptier tt">Delta 8</div>
+        <div class="pname">Delta 8 Gummies</div>
+        <div class="psub">25mg · 30 Count</div>
+        <div class="pprice">$29.99</div>
+        <div class="punit">per pack</div>
         <div class="peffects">
-          <span class="etag">Relaxed</span>
-          <span class="etag">Relizel</span>
+          <span class="etag">25mg Each</span>
+          <span class="etag">Lab Tested</span>
+          <span class="etag">Mixed Flavors</span>
+          <span class="etag eneg">21+ Only</span>
         </div>
       </div>
     </div>
 
-    <div class="menu-bottom">
-      <a href="https://instagram.com/{{INSTAGRAM}}" class="btn-pu" target="_blank" rel="noopener">Full Menu on
+    <div class="menu-bottom-btn">
+      <a href="https://instagram.com/{{INSTAGRAM}}" class="btn-pu" target="_blank" rel="noopener noreferrer">Full Menu on
         Instagram</a>
     </div>
   </section>
 
-  <!-- EXPERIENCE -->
+  <!-- EXPERIENCE / WHY US -->
   <section id="experience">
-    <div class="eyebrow eyebrow-center">
-      <div class="ey-dot"></div>Why {{BUSINESS_NAME}} Depot
+    <div class="eyebrow exp-eyebrow">
+      <div class="ey-dot"></div>Why {{BUSINESS_NAME}}
     </div>
-    <h2 class="exph"><span class="txt-purple">Premium</span> <span class="txt-green">Quality.</span><br>Every Time.</h2>
-    <p class="expsub">We curate only the finest strains from trusted cultivators. Walk in knowing exactly what you're
-      getting.</p>
+    <h2 class="exph"><span class="exph-p">Premium</span> <span class="exph-g">Products.</span><br>Best Prices.</h2>
+    <p class="expsub">We carry only the top brands at prices that beat the competition. Walk in, get what you need,
+      and leave happy — every time.</p>
     <div class="expgrid">
       <div class="expc">
         <div class="expicon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="1.5">
             <path d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg></div>
-        <div class="exptitle">Lab-Tested Quality</div>
-        <div class="expdesc">Every product verified. Know exactly what you're getting every single time.</div>
+        <div class="exptitle">Top Brands Only</div>
+        <div class="expdesc">Elf Bar, Geek Bar, RAW, Grav, and more. We stock what actually sells.</div>
       </div>
       <div class="expc">
         <div class="expicon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -1508,8 +1590,8 @@
             <path
               d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
           </svg></div>
-        <div class="exptitle">Knowledgeable Staff</div>
-        <div class="expdesc">First-timer or daily driver — our team helps you find the perfect strain for your needs.
+        <div class="exptitle">Friendly Staff</div>
+        <div class="expdesc">New to vaping or a veteran smoker — our team will point you in the right direction.
         </div>
       </div>
       <div class="expc">
@@ -1517,9 +1599,8 @@
             stroke-width="1.5">
             <path d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg></div>
-        <div class="exptitle">Always Fresh Stock</div>
-        <div class="expdesc">Menu rotating regularly. Budget picks to top-shelf — always something new to discover.
-        </div>
+        <div class="exptitle">Always Restocked</div>
+        <div class="expdesc">Fresh inventory weekly. If we're out of something, we'll have it back fast.</div>
       </div>
       <div class="expc">
         <div class="expicon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -1541,7 +1622,7 @@
       <div class="vh">Come <span class="hg">Visit</span><br>In Store.</div>
       <div class="vib">
         <div class="vib-l">Address</div>
-        <div class="vib-v">{{ADDRESS}}<br>{{CITY}}, {{STATE}}</div>
+        <div class="vib-v">{{ADDRESS}}<br>{{CITY}}</div>
       </div>
       <div class="vib">
         <div class="vib-l">Phone</div>
@@ -1551,7 +1632,7 @@
         <div class="vib-l">Instagram</div>
         <div class="vib-v">@{{INSTAGRAM}}</div>
       </div>
-      <a href="https://instagram.com/{{INSTAGRAM}}" class="ig-link" target="_blank" rel="noopener">
+      <a href="https://instagram.com/{{INSTAGRAM}}" class="ig-link" target="_blank" rel="noopener noreferrer">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
           <rect x="2" y="2" width="20" height="20" rx="5" />
           <circle cx="12" cy="12" r="5" />
@@ -1560,20 +1641,81 @@
         @{{INSTAGRAM}} on Instagram
       </a>
     </div>
-    <div class="vr">
-      <div class="vr-inner">
+    <div class="vr" data-initials="{{INITIALS}}">
+      <div class="store-hours-wrap">
         <div class="hd-title">Store Hours</div>
-        <div class="hrow" id="h-mon"><span class="hday">Monday</span><span class="htime">10:00 AM – 8:00 PM</span></div>
-        <div class="hrow" id="h-tue"><span class="hday">Tuesday</span><span class="htime">10:00 AM – 8:00 PM</span>
+        <div class="hrow" id="h-mon"><span class="hday">Monday</span><span class="htime">10:00 AM – 9:00 PM</span></div>
+        <div class="hrow" id="h-tue"><span class="hday">Tuesday</span><span class="htime">10:00 AM – 9:00 PM</span>
         </div>
-        <div class="hrow" id="h-wed"><span class="hday">Wednesday</span><span class="htime">10:00 AM – 8:00 PM</span>
+        <div class="hrow" id="h-wed"><span class="hday">Wednesday</span><span class="htime">10:00 AM – 9:00 PM</span>
         </div>
-        <div class="hrow" id="h-thu"><span class="hday">Thursday</span><span class="htime">10:00 AM – 8:00 PM</span>
+        <div class="hrow" id="h-thu"><span class="hday">Thursday</span><span class="htime">10:00 AM – 9:00 PM</span>
         </div>
-        <div class="hrow" id="h-fri"><span class="hday">Friday</span><span class="htime">10:00 AM – 8:00 PM</span></div>
-        <div class="hrow" id="h-sat"><span class="hday">Saturday</span><span class="htime">10:00 AM – 8:00 PM</span>
+        <div class="hrow" id="h-fri"><span class="hday">Friday</span><span class="htime">10:00 AM – 9:00 PM</span></div>
+        <div class="hrow" id="h-sat"><span class="hday">Saturday</span><span class="htime">10:00 AM – 9:00 PM</span>
         </div>
-        <div class="hrow" id="h-sun"><span class="hday">Sunday</span><span class="htime">10:00 AM – 5:00 PM</span></div>
+        <div class="hrow" id="h-sun"><span class="hday">Sunday</span><span class="htime">11:00 AM – 7:00 PM</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING / GET STARTED -->
+  <section id="pricing" style="padding:80px 24px;max-width:1100px;margin:0 auto;">
+    <div class="eyebrow" style="margin-bottom:12px;">
+      <div class="ey-dot"></div>Get Started
+    </div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(2rem,5vw,3.2rem);letter-spacing:2px;margin-bottom:12px;">
+      Ready To <span class="hg">Grow</span> Your Shop?
+    </div>
+    <p style="color:var(--text-dim);max-width:560px;line-height:1.7;margin-bottom:48px;">
+      Get a premium, fully-customized website built just for <strong>{{BUSINESS_NAME}}</strong>. Powered by
+      <a href="https://smokeshopgrowth.com" target="_blank" rel="noopener" style="color:var(--green);text-decoration:none;font-weight:500;">smokeshopgrowth.com</a>
+    </p>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;">
+      <!-- Starter -->
+      <div class="pricing-card" data-tier="starter" style="background:var(--glass);border:1px solid var(--border);border-radius:16px;padding:32px;position:relative;">
+        <div style="font-family:'Oswald',sans-serif;font-size:1.1rem;text-transform:uppercase;letter-spacing:2px;color:var(--purple-l);margin-bottom:8px;">Starter</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:2.8rem;line-height:1;">$199</div>
+        <p style="color:var(--text-dim);font-size:.88rem;margin:12px 0 20px;">One-time setup</p>
+        <ul style="list-style:none;padding:0;margin:0 0 24px;font-size:.9rem;line-height:2;color:var(--text-dim);">
+          <li>✅ Custom branded website</li>
+          <li>✅ Mobile responsive</li>
+          <li>✅ Google Maps integration</li>
+          <li>✅ Contact form</li>
+        </ul>
+        <button onclick="startCheckout('starter')" class="btn-ol" style="width:100%;cursor:pointer;">Get Started</button>
+      </div>
+
+      <!-- Growth (Popular) -->
+      <div class="pricing-card" data-tier="growth" style="background:var(--glass);border:2px solid var(--green);border-radius:16px;padding:32px;position:relative;">
+        <div style="position:absolute;top:-12px;right:20px;background:var(--green);color:#000;font-size:.7rem;font-weight:700;padding:4px 12px;border-radius:99px;text-transform:uppercase;letter-spacing:1px;">Most Popular</div>
+        <div style="font-family:'Oswald',sans-serif;font-size:1.1rem;text-transform:uppercase;letter-spacing:2px;color:var(--green-l);margin-bottom:8px;">Growth</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:2.8rem;line-height:1;">$299</div>
+        <p style="color:var(--text-dim);font-size:.88rem;margin:12px 0 20px;">One-time setup</p>
+        <ul style="list-style:none;padding:0;margin:0 0 24px;font-size:.9rem;line-height:2;color:var(--text-dim);">
+          <li>✅ Everything in Starter</li>
+          <li>✅ SEO optimization</li>
+          <li>✅ Instagram feed</li>
+          <li>✅ Online menu / catalog</li>
+          <li>✅ Analytics dashboard</li>
+        </ul>
+        <button onclick="startCheckout('growth')" class="btn-gr" style="width:100%;cursor:pointer;">Get Started</button>
+      </div>
+
+      <!-- Pro -->
+      <div class="pricing-card" data-tier="pro" style="background:var(--glass);border:1px solid var(--border);border-radius:16px;padding:32px;position:relative;">
+        <div style="font-family:'Oswald',sans-serif;font-size:1.1rem;text-transform:uppercase;letter-spacing:2px;color:var(--gold-l);margin-bottom:8px;">Pro</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:2.8rem;line-height:1;">$499</div>
+        <p style="color:var(--text-dim);font-size:.88rem;margin:12px 0 20px;">One-time setup</p>
+        <ul style="list-style:none;padding:0;margin:0 0 24px;font-size:.9rem;line-height:2;color:var(--text-dim);">
+          <li>✅ Everything in Growth</li>
+          <li>✅ E-commerce / online orders</li>
+          <li>✅ Loyalty program page</li>
+          <li>✅ AI chatbot integration</li>
+          <li>✅ Priority support</li>
+        </ul>
+        <button onclick="startCheckout('pro')" class="btn-pu" style="width:100%;cursor:pointer;">Get Started</button>
       </div>
     </div>
   </section>
@@ -1581,17 +1723,61 @@
   <!-- FOOTER -->
   <footer>
     <div class="fbrand">
-      <div class="fbrand-name"><span class="fp">{{BUSINESS_NAME}}</span> <span class="fg">Depot</span></div>
-      <div class="fbrand-sub">Premium Cannabis Dispensary</div>
+      <div class="fbrand-name"><span class="fp">{{BUSINESS_LINE1}}</span> <span class="fg">{{BUSINESS_LINE2}}</span></div>
+      <div class="fbrand-sub">Premium Smoke Shop · {{CITY}}</div>
     </div>
-    <div class="fdisc">Must be 21+ to purchase cannabis products. Please consume responsibly. Keep out of reach of
-      children and animals. Cannabis has intoxicating effects. Do not drive under the influence. For adult use only
-      where legally permitted.</div>
+    <div class="fdisc">Products are intended for adult use only (18+). Please use all products responsibly and
+      in compliance with local laws. Keep all products out of reach of minors.</div>
     <div class="fright">
-      <a href="https://instagram.com/{{INSTAGRAM}}" class="fig" target="_blank" rel="noopener">📸 @{{INSTAGRAM}}</a>
-      <div class="fcopy">© 2025 {{BUSINESS_NAME}} Depot · All Rights Reserved</div>
+      <a href="https://instagram.com/{{INSTAGRAM}}" class="fig" target="_blank" rel="noopener noreferrer">📸
+        @{{INSTAGRAM}}</a>
+      <div class="fcopy">© 2025 {{BUSINESS_NAME}} · All Rights Reserved · Powered by <a href="https://smokeshopgrowth.com" target="_blank" rel="noopener" style="color:var(--green);text-decoration:none;">smokeshopgrowth.com</a></div>
     </div>
   </footer>
+
+  <!-- LEAD FORM MODAL -->
+  <div id="lead-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(10px);z-index:10000;padding:20px;overflow-y:auto;display:flex;align-items:center;justify-content:center;">
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:24px;padding:40px;max-width:480px;width:100%;position:relative;box-shadow:0 30px 60px rgba(0,0,0,0.5);">
+      <button onclick="closeModal()" style="position:absolute;top:20px;right:20px;background:none;border:none;color:var(--text-dim);font-size:1.5rem;cursor:pointer;">&times;</button>
+      <div style="text-align:center;margin-bottom:32px;">
+        <h3 id="modal-title" style="font-family:'Bebas Neue',sans-serif;font-size:2.5rem;margin-bottom:8px;">Claim Your Custom Site</h3>
+        <p style="color:var(--text-dim);font-size:.9rem;">Enter your details to lock in this design and pricing.</p>
+      </div>
+      <form id="lead-capture-form" onsubmit="handleFormSubmit(event)">
+        <input type="hidden" id="form-tier" name="tier">
+        <div style="margin-bottom:20px;">
+          <input type="text" name="contactName" placeholder="Your Name" required style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:12px;padding:14px;color:#fff;font-family:'Inter',sans-serif;">
+        </div>
+        <div style="margin-bottom:20px;">
+          <input type="email" name="email" placeholder="Email Address" required style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:12px;padding:14px;color:#fff;font-family:'Inter',sans-serif;">
+        </div>
+        <div style="margin-bottom:20px;">
+          <input type="tel" name="phone" placeholder="Phone Number" required style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:12px;padding:14px;color:#fff;font-family:'Inter',sans-serif;">
+        </div>
+        <div style="margin-bottom:24px;">
+          <div style="background:var(--bg3);padding:12px;border-radius:12px;border:1px solid var(--border);font-size:.85rem;color:var(--text-dim);">
+            <strong style="color:var(--green-l);">Plan Selected:</strong> <span id="plan-display">Growth</span>
+          </div>
+        </div>
+        <button type="submit" id="submit-btn" style="width:100%;background:linear-gradient(90deg,var(--purple),var(--green));border:none;border-radius:12px;padding:16px;color:#000;font-weight:700;font-size:1.1rem;cursor:pointer;transition:transform 0.2s;">
+          Reserve My Site Now
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <style>
+    #lead-modal:not(.active) { display: none !important; }
+    #lead-modal.active { display: flex !important; }
+  </style>
+
+  <!-- FLOATING CHAT -->
+
+  <div class="chat-bubble">
+    <svg viewBox="0 0 24 24">
+      <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
+    </svg>
+  </div>
 
   <script>
     gsap.registerPlugin(ScrollTrigger);
@@ -1633,7 +1819,26 @@
 
       gsap.from('.vl', { scrollTrigger: { trigger: '#visit', start: 'top 75%' }, opacity: 0, x: -40, duration: .9 });
       gsap.from('.vr', { scrollTrigger: { trigger: '#visit', start: 'top 75%' }, opacity: 0, x: 40, duration: .9, delay: .15 });
+
+      gsap.utils.toArray('.pricing-card').forEach((el, i) => {
+        gsap.from(el, {
+          scrollTrigger: { trigger: el, start: 'top 88%' },
+          opacity: 0, y: 40, duration: .7, delay: i * .12, ease: 'power3.out'
+        });
+      });
     }
+
+    // Auto-enter if query params present (demo mode — no age gate needed)
+    (function () {
+      const p = new URLSearchParams(window.location.search);
+      const biz = p.get('name') || p.get('business');
+      const city = p.get('city');
+      // If loaded via demo link, skip age gate
+      if (biz || city) {
+        document.getElementById('age-gate').style.display = 'none';
+        introAnims();
+      }
+    })();
 
     // Today's hours highlight
     const dayIds = ['h-sun', 'h-mon', 'h-tue', 'h-wed', 'h-thu', 'h-fri', 'h-sat'];
@@ -1652,6 +1857,83 @@
         btn.classList.add('active');
       });
     });
+
+    function closeModal() {
+      document.getElementById('lead-modal').classList.remove('active');
+    }
+
+    // Stripe Checkout Replacement with Lead Form
+    function startCheckout(tier) {
+      const modal = document.getElementById('lead-modal');
+      const tierInput = document.getElementById('form-tier');
+      const planDisplay = document.getElementById('plan-display');
+      
+      tierInput.value = tier;
+      planDisplay.textContent = tier.charAt(0).toUpperCase() + tier.slice(1) + (tier === 'pro' ? ' ($499)' : ' ($299)');
+      
+      modal.classList.add('active');
+    }
+
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+      const form = e.target;
+      const btn = document.getElementById('submit-btn');
+      const originalText = btn.textContent;
+      
+      const formData = new FormData(form);
+      const payload = {
+        contactName: formData.get('contactName'),
+        email: formData.get('email'),
+        phone: formData.get('phone'),
+        tier: formData.get('tier'),
+        businessName: window.BUSINESS?.name || '{{BUSINESS_NAME}}',
+        city: window.BUSINESS?.city || '{{CITY}}'
+      };
+
+      try {
+        btn.textContent = 'Securing Your Site...';
+        btn.disabled = true;
+
+        const resp = await fetch('/api/submit-lead', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await resp.json();
+        if (data.success) {
+          form.innerHTML = `
+            <div style="text-align:center;padding:40px 0;">
+              <div style="font-size:3rem;margin-bottom:20px;">🎉</div>
+              <h3 style="font-family:'Bebas Neue',sans-serif;font-size:2rem;margin-bottom:12px;color:var(--green-l);">Success!</h3>
+              <p style="color:var(--text-dim);font-size:.95rem;line-height:1.6;">
+                We've reserved the <strong>${payload.tier}</strong> package for <strong>${payload.businessName}</strong>.<br><br>
+                Check your email (${payload.email}) for the next steps!
+              </p>
+              <button onclick="closeModal()" style="margin-top:24px;background:rgba(255,255,255,0.1);border:1px solid var(--border);padding:10px 20px;border-radius:8px;color:#fff;cursor:pointer;">Close</button>
+            </div>
+          `;
+        } else {
+          throw new Error(data.error || 'Failed to submit');
+        }
+      } catch (err) {
+        alert(err.message);
+        btn.textContent = originalText;
+        btn.disabled = false;
+      }
+    }
+
+
+    // Show paid confirmation banner
+    (function() {
+      const p = new URLSearchParams(window.location.search);
+      if (p.get('paid') === 'true') {
+        const banner = document.createElement('div');
+        banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:linear-gradient(90deg,#39ff14,#00f0ff);color:#000;text-align:center;padding:14px;font-weight:700;font-size:1rem;';
+        banner.innerHTML = '🎉 Payment received! We\'ll start building your site within 24 hours. Check your email for next steps.';
+        document.body.prepend(banner);
+      }
+    })();
   </script>
 </body>
 

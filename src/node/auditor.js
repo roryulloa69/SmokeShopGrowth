@@ -51,9 +51,8 @@ const LH_TIMEOUT_MS = 45_000;
 // ──────────────────────────────────────────────
 // Output columns
 // ──────────────────────────────────────────────
-const OUTPUT_COLUMNS = [
-    'business_name',
-    'website',
+// Output columns: We will preserve all input columns and add/update these:
+const AUDIT_COLUMNS = [
     'has_website',
     'website_status',
     'ssl',
@@ -61,6 +60,7 @@ const OUTPUT_COLUMNS = [
     'mobile_friendly',
     'audit_summary',
 ];
+
 
 // ──────────────────────────────────────────────
 // Helpers
@@ -312,7 +312,7 @@ async function auditLead(lead, idx, total) {
     if (!url) {
         log(`${label} — no website`);
         return {
-            business_name,
+            ...lead,
             website: rawWebsite || '',
             has_website: 'No',
             website_status: '',
@@ -321,6 +321,7 @@ async function auditLead(lead, idx, total) {
             mobile_friendly: '',
             audit_summary: 'No website found — could benefit from a modern online presence.',
         };
+
     }
 
     log(`${label} → ${url}`);
@@ -367,7 +368,7 @@ async function auditLead(lead, idx, total) {
     );
 
     return {
-        business_name,
+        ...lead,
         website: url,
         has_website: 'Yes',
         website_status: fast.status || 'Error',
@@ -377,6 +378,7 @@ async function auditLead(lead, idx, total) {
         audit_summary: summary,
     };
 }
+
 
 // ──────────────────────────────────────────────
 // CSV I/O
@@ -400,7 +402,10 @@ function writeResults(filePath, rows) {
     return new Promise((resolve, reject) => {
         mkdirSync(path.dirname(filePath), { recursive: true });
         const ws = fs.createWriteStream(filePath);
-        const stream = format({ headers: OUTPUT_COLUMNS });
+        // Extract all unique headers from all rows to ensure we don't miss anything
+        const allHeaders = new Set();
+        rows.forEach(r => Object.keys(r).forEach(k => allHeaders.add(k)));
+        const stream = format({ headers: Array.from(allHeaders) });
         stream.pipe(ws);
         for (const row of rows) stream.write(row);
         stream.end();
@@ -408,6 +413,7 @@ function writeResults(filePath, rows) {
         ws.on('error', reject);
     });
 }
+
 
 // ──────────────────────────────────────────────
 // Main

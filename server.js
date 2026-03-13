@@ -16,7 +16,6 @@ const express = require('express');
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
-const { mkdirSync } = require('fs');
 const { google } = require('googleapis');
 const csv = require('csv-parser');
 
@@ -35,6 +34,53 @@ const webhookLimiter = rateLimit({
     message: { error: 'Too many requests, please try again later.' },
 });
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve deployments folder as static
+const deployPath = path.join(__dirname, 'deployments');
+if (!fs.existsSync(deployPath)) fs.mkdirSync(deployPath);
+app.use('/deployments', express.static(deployPath));
+
+app.get('/demo', (req, res) => {
+    const templatePath = path.join(__dirname, 'template.html');
+    if (!fs.existsSync(templatePath)) {
+        return res.status(404).send('Demo template not found.');
+    }
+
+    const business = {
+        name: req.query.name || req.query.shop || 'Your Smoke Shop',
+        city: req.query.city || 'Your City',
+        phone: req.query.phone || '(000) 000-0000',
+        instagram: req.query.instagram || 'yourshop',
+        address: req.query.address || req.query.city || '', 
+        hours: 'Open daily • 9AM - 11PM'
+    };
+
+    let html = fs.readFileSync(templatePath, 'utf8');
+
+    // Split name into two parts for the styled header if possible
+    const nameParts = business.name.split(' ');
+    const line1 = nameParts[0] || '';
+    const line2 = nameParts.slice(1).join(' ') || '';
+
+    // Replace identifiers
+    html = html.replace(/{{BUSINESS_NAME}}/g, business.name);
+    html = html.replace(/{{BUSINESS_LINE1}}/g, line1);
+    html = html.replace(/{{BUSINESS_LINE2}}/g, line2);
+    html = html.replace(/{{CITY}}/g, business.city);
+    html = html.replace(/{{PHONE}}/g, business.phone);
+    html = html.replace(/{{INSTAGRAM}}/g, business.instagram);
+
+    // Also inject window.BUSINESS for client-side scripts
+    const script = `<script>window.BUSINESS = ${JSON.stringify(business)};</script>`;
+    html = html.replace('<head>', `<head>\n  ${script}`);
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
+});
+
+
+// Serve assets for the premium template (styles.css, animations.js, etc.)
+app.use(express.static(path.join(__dirname, 'template')));
 
 // ──────────────────────────────────────────────
 // In-memory job store
@@ -75,8 +121,8 @@ app.post('/api/run', (req, res) => {
     const jobId = makeJobId();
     const citySlug = city.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     const dataDir = path.join('data', citySlug);
-    mkdirSync(dataDir, { recursive: true });
-    mkdirSync('logs', { recursive: true });
+    fs.mkdirSync(dataDir, { recursive: true });
+    fs.mkdirSync('logs', { recursive: true });
 
     const files = {
         leads: path.join(dataDir, 'leads.csv'),
@@ -91,7 +137,9 @@ app.post('/api/run', (req, res) => {
         step: 0,
         logs: [],
         city, bizType, maxResults, skipLighthouse, citySlug, dataDir, files,
-        exportSheets, sheetsId, generateDemo,
+        exportSheets, sheetsId,
+        baseUrl: `${req.protocol}://${req.get('host')}`,
+        generateDemo,
         clients: [], // SSE subscribers
     });
 
@@ -248,13 +296,14 @@ async function runPipeline(jobId) {
     pushLog(jobId, '🔍 Step 1/3 — Scraping Google Maps…', 'step');
     job.step = 1;
     await runChild(jobId, 'python', [
-        'scraper.py',
+        path.join(__dirname, 'src', 'python', 'scraper.py'),
         '--city', job.city,
         '--type', job.bizType,
         '--max-results', String(job.maxResults),
         '--output', job.files.leads,
         '--headless',
     ]);
+
 
     if (!fs.existsSync(job.files.leads)) {
         throw new Error('Scraper completed but no leads.csv was created.');
@@ -267,13 +316,14 @@ async function runPipeline(jobId) {
     pushLog(jobId, '🌐 Step 2/3 — Auditing websites…', 'step');
     job.step = 2;
     const auditorArgs = [
-        'auditor.js',
+        path.join(__dirname, 'src', 'node', 'auditor.js'),
         '--input', job.files.leads,
         '--output', job.files.audited,
         '--concurrency', '8',
     ];
     if (job.skipLighthouse !== false) auditorArgs.push('--skip-lighthouse');
     await runChild(jobId, 'node', auditorArgs);
+
 
     const auditedCount = await countCsvRows(job.files.audited);
     pushLog(jobId, `✅ Audited ${auditedCount} websites.`, 'success');
@@ -283,10 +333,13 @@ async function runPipeline(jobId) {
         pushLog(jobId, '✍️  Step 3/3 — Generating outreach messages…', 'step');
         job.step = 3;
         await runChild(jobId, 'node', [
-            'generate_outreach.js',
+            path.join(__dirname, 'src', 'node', 'generate_outreach.js'),
             '--input', job.files.audited,
             '--output', job.files.outreach,
+            '--base-url', job.baseUrl,
         ]);
+
+
         const outreachCount = await countCsvRows(job.files.outreach);
         pushLog(jobId, `✅ Generated ${outreachCount} outreach messages.`, 'success');
     } else {
@@ -298,11 +351,12 @@ async function runPipeline(jobId) {
         pushLog(jobId, '🎥 Step 4/4 — Generating Minimax demo videos…', 'step');
         job.step = 4;
         await runChild(jobId, 'node', [
-            'generate_demo.js',
+            path.join(__dirname, 'src', 'node', 'generate_demo.js'),
             '--input', fs.existsSync(job.files.outreach) ? job.files.outreach : job.files.audited,
             '--output', job.files.demo,
             '--limit', '10' // Only do top 10 to save API costs & time
         ]);
+
         const demoCount = await countCsvRows(job.files.demo);
         pushLog(jobId, `✅ Generated demo video entries  (${demoCount} leads processed).`, 'success');
     } else if (job.generateDemo && !process.env.MINIMAX_API_KEY) {
@@ -459,7 +513,295 @@ async function exportToSheets(spreadsheetId, csvPath, sheetTitle) {
 }
 
 // ──────────────────────────────────────────────
-// Route: Create Stripe Checkout Session
+// Route: Send Personalized Demo Email
+// ──────────────────────────────────────────────
+// POST { email, business_name, city }
+// Sends a branded HTML email with the personalized demo link via SMTP
+app.post('/api/send-demo', webhookLimiter, async (req, res) => {
+    const { email, business_name, city = '', phone = '', instagram = '' } = req.body || {};
+    if (!email || !business_name) {
+        return res.status(400).json({ error: 'email and business_name are required' });
+    }
+
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+    const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
+    const smtpPort = parseInt(process.env.SMTP_PORT || '587', 10);
+    const fromName = process.env.FROM_NAME || process.env.AGENT_NAME || 'Alex';
+    // Use PUBLIC_URL (e.g. ngrok) so the demo link works outside localhost
+    const serverBase = process.env.PUBLIC_URL || process.env.DEMO_BASE_URL || `http://localhost:${PORT}`;
+
+    if (!smtpUser || !smtpPass) {
+        return res.status(500).json({ error: 'SMTP credentials not set in .env' });
+    }
+
+    const demoUrl = `${serverBase}/demo?name=${encodeURIComponent(business_name)}&city=${encodeURIComponent(city)}&phone=${encodeURIComponent(phone)}&instagram=${encodeURIComponent(instagram)}`;
+    const checkoutUrl = `/api/create-checkout`; // handled client-side
+
+    const htmlBody = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#0a0a0a;font-family:sans-serif;color:#fff;">
+  <div style="max-width:580px;margin:0 auto;padding:40px 24px;">
+    <h1 style="color:#39ff14;font-size:1.5rem;margin-bottom:8px;">
+      Here's your free demo, ${business_name}! 🚀
+    </h1>
+    <p style="color:#ccc;font-size:1rem;line-height:1.7;margin-bottom:24px;">
+      Hey! It's Alex — we just spoke on the phone. I put together a custom demo
+      website just for <strong>${business_name}</strong>. Click below to check it out:
+    </p>
+    <div style="text-align:center;margin:32px 0;">
+      <a href="${demoUrl}"
+         style="display:inline-block;background:linear-gradient(90deg,#00f0ff,#39ff14);
+                color:#000;font-weight:700;padding:14px 36px;border-radius:999px;
+                font-size:1.1rem;text-decoration:none;">
+        🌐 View Your Custom Demo
+      </a>
+    </div>
+    <p style="color:#aaa;font-size:.9rem;line-height:1.7;">
+      This demo is personalized for <strong>${business_name}</strong> in <strong>${city || 'your area'}</strong>.
+      If you like what you see and want to move forward, there's a button on the demo page to get started —
+      totally no pressure, just have a look!
+    </p>
+    <hr style="border:none;border-top:1px solid #222;margin:32px 0;"/>
+    <p style="color:#666;font-size:.82rem;">
+      ${fromName} • SmokeShopGrowth<br/>
+      Questions? Just reply to this email.
+    </p>
+  </div>
+</body>
+</html>`;
+
+    try {
+        const nodemailer = require('nodemailer');
+        const transporter = nodemailer.createTransport({
+            host: smtpHost,
+            port: smtpPort,
+            secure: false,
+            auth: { user: smtpUser, pass: smtpPass },
+        });
+
+        await transporter.sendMail({
+            from: `"${fromName}" <${smtpUser}>`,
+            to: email,
+            subject: `Your free custom website demo for ${business_name} 🎯`,
+            html: htmlBody,
+            text: `Hey! Here's your custom demo for ${business_name}: ${demoUrl}\n\n— ${fromName}, SmokeShopGrowth`,
+        });
+
+        console.log(`📧 Demo email sent to ${email} for ${business_name}`);
+        res.json({ success: true, demoUrl });
+    } catch (err) {
+        console.error('Demo email error:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ──────────────────────────────────────────────
+// Route: Vapi Call Webhook (end-of-call events)
+// ──────────────────────────────────────────────
+// Vapi POSTs here when a call ends. We:
+//   1. Parse the collected email from transcript
+//   2. Auto-send the demo email if email was captured
+//   3. Forward all call data to Zapier for Sheets logging
+// ──────────────────────────────────────────────
+// Route: Submit Lead from Demo Pages
+// ──────────────────────────────────────────────
+app.post('/api/submit-lead', webhookLimiter, async (req, res) => {
+    const { contactName, email, phone, tier, businessName, city } = req.body || {};
+    
+    if (!email || !contactName) {
+        return res.status(400).json({ error: 'Name and email are required' });
+    }
+
+    const submissionDate = new Date().toISOString();
+    const csvLine = `"${submissionDate}","${contactName}","${email}","${phone}","${tier}","${businessName}","${city}"\n`;
+    
+    try {
+        const dataDir = path.join(__dirname, 'data');
+        if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
+        
+        const csvPath = path.join(dataDir, 'submissions.csv');
+        const header = "Date,Contact Name,Email,Phone,Tier,Business,City\n";
+        if (!fs.existsSync(csvPath)) fs.writeFileSync(csvPath, header);
+        
+        fs.appendFileSync(csvPath, csvLine);
+        console.log(`✅ Lead captured: ${email} for ${businessName}`);
+
+        // Notify Admin via SMTP if configured
+        const smtpUser = process.env.SMTP_USER;
+        const smtpPass = process.env.SMTP_PASS;
+        if (smtpUser && smtpPass) {
+            const nodemailer = require('nodemailer');
+            const transporter = nodemailer.createTransport({
+                host: process.env.SMTP_HOST || 'smtp.gmail.com',
+                port: parseInt(process.env.SMTP_PORT || '587', 10),
+                secure: false,
+                auth: { user: smtpUser, pass: smtpPass },
+            });
+
+            await transporter.sendMail({
+                from: `"Lead Alert" <${smtpUser}>`,
+                to: smtpUser, // Notify yourself
+                subject: `🔥 NEW LEAD: ${businessName} (${tier})`,
+                text: `You have a new lead from the demo page!\n\nBusiness: ${businessName}\nContact: ${contactName}\nEmail: ${email}\nPhone: ${phone}\nTier: ${tier}\nCity: ${city}\n\nDate: ${submissionDate}`,
+            });
+        }
+
+        res.json({ success: true, message: 'Lead captured successfully' });
+    } catch (err) {
+        console.error('Lead capture error:', err.message);
+        res.status(500).json({ error: 'Failed to save lead' });
+    }
+});
+
+// ──────────────────────────────────────────────
+// Route: Get Captured Leads
+// ──────────────────────────────────────────────
+app.get('/api/leads', (req, res) => {
+    try {
+        const csvPath = path.join(__dirname, 'data', 'submissions.csv');
+        if (!fs.existsSync(csvPath)) return res.json({ leads: [] });
+        
+        const content = fs.readFileSync(csvPath, 'utf8');
+        const lines = content.trim().split('\n');
+        const headers = lines[0].split(',');
+        const leads = lines.slice(1).map(line => {
+            const values = line.split(',');
+            const lead = {};
+            headers.forEach((h, i) => lead[h.toLowerCase().replace(/ /g, '_')] = values[i] || '');
+            return lead;
+        });
+        res.json({ leads });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to read leads' });
+    }
+});
+
+// ──────────────────────────────────────────────
+// Route: "Deploy" / Finalize Site for Delivery
+// ──────────────────────────────────────────────
+app.post('/api/deploy-site', async (req, res) => {
+    const { business, email, tier } = req.body;
+    if (!business) return res.status(400).json({ error: 'Business name is required' });
+
+    try {
+        // Create a 'deployments' folder
+        const deployRoot = path.join(__dirname, 'deployments');
+        if (!fs.existsSync(deployRoot)) fs.mkdirSync(deployRoot);
+        
+        const projectFolderName = `${business.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Date.now()}`;
+        const projectPath = path.join(deployRoot, projectFolderName);
+        fs.mkdirSync(projectPath);
+
+        // Copy template and generate index.html
+        // For 'Delivery', we use the generate-from-templates logic but output to the deployment folder
+        const { previewUrl } = await require('./src/node/generate-from-templates.js').generateForOne({
+            TargetBusiness: business,
+            TargetOutput: path.join(projectPath, 'index.html'),
+            isProduction: true // This flag will enable/disable specific tier features
+        });
+
+        res.json({ 
+            success: true, 
+            message: `Site deployed for ${business}`,
+            folder: projectFolderName,
+            url: `/deployments/${projectFolderName}/index.html` 
+        });
+    } catch (err) {
+        console.error('Deployment error:', err);
+        res.status(500).json({ error: 'Failed to deploy site' });
+    }
+});
+
+app.post('/webhook/vapi', async (req, res) => {
+
+    // Acknowledge immediately so Vapi doesn't retry
+    res.status(200).json({ received: true });
+
+    try {
+        const body = req.body || {};
+        const type = body.message?.type || body.type || '';
+
+        // Only process end-of-call summary events
+        if (type !== 'end-of-call-report' && type !== 'end_of_call_report') return;
+
+        const call = body.message?.call || body.call || body;
+        const analysis = body.message?.analysis || body.analysis || {};
+        const artifact = body.message?.artifact || body.artifact || {};
+
+        // Extract key fields
+        const business_name = call?.customer?.name || call?.metadata?.business_name || '';
+        const phone = call?.customer?.number || '';
+        const city = call?.metadata?.city || '';
+        const call_id = call?.id || '';
+        const duration = call?.endedAt && call?.startedAt
+            ? Math.round((new Date(call.endedAt) - new Date(call.startedAt)) / 1000)
+            : 0;
+        const outcome = analysis?.successEvaluation || analysis?.summary || 'completed';
+        const summary = analysis?.summary || '';
+
+        // ── Try to find collected email in the transcript ──────────────
+        let collected_email = '';
+        const messages = artifact?.messages || [];
+        for (const msg of messages) {
+            const text = (msg.message || msg.content || '').toLowerCase();
+            // Look for email pattern spoken after "what email" prompt
+            const emailMatch = text.match(/[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}/i);
+            if (emailMatch) {
+                collected_email = emailMatch[0];
+                break;
+            }
+        }
+
+        console.log(`📞 Vapi call ended — ${business_name} (${phone}) | email: ${collected_email || 'none'} | outcome: ${outcome}`);
+
+        // ── Auto-send demo email if we collected one ───────────────────
+        if (collected_email && business_name) {
+            try {
+                await fetch(`http://localhost:${process.env.PORT || 3000}/api/send-demo`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: collected_email,
+                        business_name,
+                        city,
+                    }),
+                });
+                console.log(`✅ Demo email auto-triggered to ${collected_email}`);
+            } catch (emailErr) {
+                console.error('Failed to auto-send demo email:', emailErr.message);
+            }
+        }
+
+        // ── Forward all fields to Zapier ───────────────────────────────
+        const zapierUrl = process.env.ZAPIER_WEBHOOK_URL;
+        if (zapierUrl) {
+            const payload = {
+                business_name,
+                phone,
+                city,
+                call_id,
+                duration_seconds: duration,
+                outcome,
+                summary,
+                email: collected_email,
+                contact_value: collected_email ? 'email_captured' : 'no_contact',
+                timestamp: new Date().toISOString(),
+            };
+            fetch(zapierUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            }).catch(err => console.error('Zapier forward error:', err.message));
+        }
+    } catch (err) {
+        console.error('Vapi webhook processing error:', err.message);
+    }
+});
+
+
 // ──────────────────────────────────────────────
 // POST { email, business_name, city, tier }
 // Returns { checkout_url }
@@ -476,8 +818,8 @@ app.post('/api/create-checkout', webhookLimiter, async (req, res) => {
 
     const TIER_PRICES = {
         starter: { setup: 19900, name: 'Starter Website' },
-        growth:  { setup: 29900, name: 'Growth Website' },
-        pro:     { setup: 49900, name: 'Pro Website' },
+        growth: { setup: 29900, name: 'Growth Website' },
+        pro: { setup: 49900, name: 'Pro Website' },
     };
     const selected = TIER_PRICES[tier] || TIER_PRICES.growth;
     const DEMO_BASE_URL = process.env.DEMO_BASE_URL || 'https://smoke-shop-premium-demo.netlify.app';
@@ -527,15 +869,77 @@ app.post('/api/template-submission', webhookLimiter, async (req, res) => {
 
         const submission = {
             id: makeJobId(),
-            shopName: shopName.trim(),
-            city: city.trim(),
-            phone: phone.trim(),
-            email: email.trim(),
+            shopName: String(shopName).trim(),
+            city: String(city).trim(),
+            phone: String(phone).trim(),
+            email: String(email).trim(),
             timestamp: new Date().toISOString()
         };
 
         templateSubmissions.push(submission);
-        console.log(`✓ Form received: ${submission.shopName} (${submission.city})`);
+
+        // 1. Persist to CSV
+        const submissionsFile = path.join(__dirname, 'data', 'submissions.csv');
+        // Escape quotes for CSV format
+        const safeName = submission.shopName.replace(/"/g, '""');
+        const safeCity = submission.city.replace(/"/g, '""');
+        const csvLine = `"${submission.id}","${submission.timestamp}","${safeName}","${safeCity}","${submission.phone}","${submission.email}"\n`;
+
+        // Ensure data directory exists
+        if (!fs.existsSync(path.join(__dirname, 'data'))) {
+            fs.mkdirSync(path.join(__dirname, 'data'));
+        }
+
+        if (!fs.existsSync(submissionsFile)) {
+            fs.writeFileSync(submissionsFile, 'id,timestamp,shopName,city,phone,email\n');
+        }
+        fs.appendFileSync(submissionsFile, csvLine);
+        console.log(`✓ Form received & saved: ${submission.shopName} (${submission.city})`);
+
+        // 2. Send Notification Email to Admin (You) & Auto-Reply to Lead
+        if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+            try {
+                const nodemailer = require('nodemailer');
+                const transporter = nodemailer.createTransport({
+                    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+                    port: parseInt(process.env.SMTP_PORT || '587', 10),
+                    secure: false,
+                    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+                });
+
+                // Admin Notification
+                const adminMail = transporter.sendMail({
+                    from: `"${process.env.FROM_NAME || 'Lead Bot'}" <${process.env.SMTP_USER}>`,
+                    to: process.env.SMTP_USER, // Send to yourself
+                    subject: `🔔 New Lead: ${submission.shopName}`,
+                    text: `New submission from the demo page:\n\nName: ${submission.shopName}\nCity: ${submission.city}\nPhone: ${submission.phone}\nEmail: ${submission.email}\n\nTimestamp: ${submission.timestamp}`,
+                });
+
+                // Auto-Reply to Lead
+                const leadMail = transporter.sendMail({
+                    from: `"${process.env.FROM_NAME || 'SmokeShopGrowth'}" <${process.env.SMTP_USER}>`,
+                    to: submission.email,
+                    subject: `We've received your demo request! 🚀`,
+                    html: `
+                        <div style="font-family: sans-serif; color: #333; max-width: 600px;">
+                            <h2>Hi ${submission.shopName},</h2>
+                            <p>Thanks for requesting a demo! We've received your information and will be in touch shortly.</p>
+                            <p><strong>Your Details:</strong><br>
+                            City: ${submission.city}<br>
+                            Phone: ${submission.phone}</p>
+                            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                            <p style="color: #666; font-size: 0.9em;">Best,<br>The SmokeShopGrowth Team</p>
+                        </div>
+                    `
+                });
+
+                await Promise.all([adminMail, leadMail]);
+                console.log(`📧 Notification emails sent (Admin & Lead).`);
+            } catch (emailErr) {
+                console.error('Failed to send notification emails:', emailErr.message);
+                // Don't fail the request just because admin email failed
+            }
+        }
 
         res.status(200).json({
             success: true,

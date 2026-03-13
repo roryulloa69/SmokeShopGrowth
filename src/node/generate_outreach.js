@@ -43,6 +43,8 @@ const OUTPUT_FILE = getArg('--output', 'data/outreach_messages.csv');
 const CONCURRENCY = parseInt(getArg('--concurrency', '5'), 10);
 const MODEL = getArg('--model', 'gpt-4o-mini');
 const DRY_RUN = hasFlag('--dry-run');
+const BASE_URL = getArg('--base-url', process.env.BASE_URL || 'http://localhost:3000');
+
 
 // ──────────────────────────────────────────────
 // OpenAI client
@@ -93,6 +95,8 @@ function buildPrompt(lead) {
         ? `Google rating: ${rating} stars (${review_count} reviews).`
         : '';
 
+    const demoUrl = `${BASE_URL}/demo?name=${encodeURIComponent(business_name)}&city=${encodeURIComponent(lead.city || '')}&phone=${encodeURIComponent(lead.phone || '')}`;
+
     return `
 You are a friendly local web design consultant writing a short outreach email to a small business owner.
 
@@ -106,11 +110,13 @@ Write a short, warm, non-pushy email to this business owner. Structure it as:
 1. One or two sentences acknowledging something positive about their business or their presence online.
 2. One or two sentences highlighting a specific problem or opportunity (based on the audit data above). Be specific, not generic.
 3. One friendly sentence offering to help — a simple modern website, or site improvements — without being salesy.
+4. IMPORTANT: Include this link as the "demo" of what their site could look like: ${demoUrl}
 
 Tone: friendly, helpful, honest, short. Do NOT use buzzwords like "digital transformation" or "online presence optimization". Do NOT use bullet points. Write in plain paragraphs as if talking to a neighbour.
 
 Reply with only the email body text. No subject line. No "Dear [Name]". No sign-off. Just the 3–4 sentence body.
 `.trim();
+
 }
 
 // ──────────────────────────────────────────────

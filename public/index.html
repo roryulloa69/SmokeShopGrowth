@@ -81,8 +81,8 @@
     /* ── Card ── */
     .card {
       background: var(--surface);
-      backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(16px);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 28px 32px;
@@ -669,8 +669,8 @@
       border-radius: 12px;
       font-size: 0.85rem;
       font-weight: 500;
-      backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(16px);
       border: 1px solid rgba(255, 255, 255, 0.06);
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
       transform: translateX(120%);
@@ -753,6 +753,18 @@
       transition: opacity 0.3s ease;
     }
 
+    /* ── Utility classes (replaces inline styles) ── */
+    .mt-16 { margin-top: 16px; }
+    .mt-24 { margin-top: 24px; }
+    .qc-status-bar { margin-top: 16px; font-size: 0.85rem; color: var(--muted); text-align: center; }
+    .card-title--row { display: flex; justify-content: space-between; align-items: center; }
+    .terminal-spacer { width: 36px; }
+    .sk-100 { width: 100px; }
+    .sk-120 { width: 120px; }
+    .sk-140 { width: 140px; }
+    .sk-150 { width: 150px; }
+    .sk-160 { width: 160px; }
+
     /* ── Responsive ── */
     @media (max-width: 640px) {
       body { padding: 28px 14px 60px; }
@@ -797,6 +809,18 @@
 
   <div class="container">
 
+    <!-- ── Leads & Conversions Card ── -->
+    <div class="card mt-16" id="leads-section">
+      <div class="card-title--row">
+        <div class="card-title" style="margin-bottom:0">Recent Leads & Conversions</div>
+        <button class="btn-dl" onclick="refreshLeads()" style="padding: 6px 14px">Refresh</button>
+      </div>
+      <div id="leads-container" class="mt-24">
+        <div class="skeleton-row"><div class="skeleton-bar sk-150"></div><div class="skeleton-bar sk-100"></div></div>
+        <div class="skeleton-row"><div class="skeleton-bar sk-150"></div><div class="skeleton-bar sk-100"></div></div>
+      </div>
+    </div>
+
     <!-- ── Search Form ── -->
     <div class="card">
       <div class="card-title">Search Settings</div>
@@ -813,15 +837,6 @@
             <input type="text" id="bizType" value="smoke shop" placeholder="e.g. vape shop, dispensary" />
           </label>
 
-          <label class="full">
-            <span>Max Results</span>
-            <div class="slider-wrap">
-              <input type="range" id="maxResults" min="10" max="200" step="10" value="100"
-                oninput="document.getElementById('maxVal').textContent = this.value" />
-              <span class="slider-val" id="maxVal">100</span>
-            </div>
-          </label>
-
           <!-- Toggles -->
           <label class="full">
             <div class="toggle-row">
@@ -830,7 +845,7 @@
                 <div class="toggle-desc">Faster — uses basic Axios + Cheerio checks instead</div>
               </div>
               <label class="toggle">
-                <input type="checkbox" id="skipLighthouse" checked />
+                <input type="checkbox" id="skipLighthouse" checked aria-label="Skip Lighthouse Audit" />
                 <div class="toggle-track"></div>
               </label>
             </div>
@@ -843,7 +858,7 @@
                 <div class="toggle-desc">Uses Minimax T2V to create website previews (Requires API Key)</div>
               </div>
               <label class="toggle">
-                <input type="checkbox" id="generateDemo" checked />
+                <input type="checkbox" id="generateDemo" checked aria-label="Generate Demo Videos" />
                 <div class="toggle-track"></div>
               </label>
             </div>
@@ -856,7 +871,7 @@
                 <div class="toggle-desc">Requires credentials.json in project root</div>
               </div>
               <label class="toggle">
-                <input type="checkbox" id="exportSheets" checked
+                <input type="checkbox" id="exportSheets" checked aria-label="Export to Google Sheets"
                   onchange="document.getElementById('sheets-field').classList.toggle('visible', this.checked)" />
                 <div class="toggle-track"></div>
               </label>
@@ -869,7 +884,7 @@
 
         </div>
 
-        <div style="margin-top:24px">
+        <div class="mt-24">
           <button type="submit" class="btn-run" id="run-btn">
             <span id="run-btn-text">Run Pipeline</span>
           </button>
@@ -886,7 +901,7 @@
           <input type="text" id="qc-phone" placeholder="e.g. +1 555 123 4567" required />
         </label>
 
-        <div class="form-grid" style="margin-top: 16px;">
+        <div class="form-grid mt-16">
           <label>
             <span>Business Name (Optional)</span>
             <input type="text" id="qc-biz" placeholder="e.g. Acme Corp" />
@@ -897,19 +912,19 @@
           </label>
         </div>
 
-        <div style="margin-top:24px">
+        <div class="mt-24">
           <button type="submit" class="btn-call" id="qc-btn">
             <span id="qc-btn-text">Call Now (ElevenLabs)</span>
           </button>
         </div>
-        <div id="qc-status" style="margin-top: 16px; font-size: 0.85rem; color: var(--muted); text-align: center;">
+        <div id="qc-status" class="qc-status-bar">
         </div>
       </form>
     </div>
 
     <!-- ── Progress ── -->
     <div class="card" id="progress-card">
-      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+      <div class="card-title card-title--row">
         <span>Pipeline Progress</span>
         <span id="status-badge" class="badge running"><span class="dot-blink"></span> Running</span>
       </div>
@@ -943,7 +958,7 @@
           <div class="terminal-dot yellow"></div>
           <div class="terminal-dot green"></div>
           <div class="terminal-title-text">pipeline &mdash; live output</div>
-          <div style="width:36px"></div>
+          <div class="terminal-spacer"></div>
         </div>
         <div class="log-terminal" id="log-terminal"></div>
       </div>
@@ -954,10 +969,10 @@
       <div class="card-title">Results</div>
       <div id="result-rows">
         <!-- skeleton placeholder -->
-        <div class="skeleton-row"><div class="skeleton-bar" style="width:120px"></div><div class="skeleton-bar" style="width:100px"></div></div>
-        <div class="skeleton-row"><div class="skeleton-bar" style="width:140px"></div><div class="skeleton-bar" style="width:100px"></div></div>
-        <div class="skeleton-row"><div class="skeleton-bar" style="width:150px"></div><div class="skeleton-bar" style="width:100px"></div></div>
-        <div class="skeleton-row"><div class="skeleton-bar" style="width:160px"></div><div class="skeleton-bar" style="width:100px"></div></div>
+        <div class="skeleton-row"><div class="skeleton-bar sk-120"></div><div class="skeleton-bar sk-100"></div></div>
+        <div class="skeleton-row"><div class="skeleton-bar sk-140"></div><div class="skeleton-bar sk-100"></div></div>
+        <div class="skeleton-row"><div class="skeleton-bar sk-150"></div><div class="skeleton-bar sk-100"></div></div>
+        <div class="skeleton-row"><div class="skeleton-bar sk-160"></div><div class="skeleton-bar sk-100"></div></div>
       </div>
     </div>
 
@@ -1121,6 +1136,7 @@
             setStep(6);
             showResults(msg.files, jobId);
             showToast('Pipeline complete \u2014 results ready!', 'success');
+            refreshLeads(); // Refresh leads after pipeline completion
           } else {
             badge.className = 'badge failed';
             badge.textContent = '\u2717 Failed';
@@ -1199,6 +1215,59 @@
         if (sp) sp.remove();
       }
     });
+    // ── Lead Management Logic ──
+    async function refreshLeads() {
+      const container = document.getElementById('leads-container');
+      try {
+        const res = await fetch('/api/leads');
+        const data = await res.json();
+        
+        if (!data.leads || data.leads.length === 0) {
+          container.innerHTML = '<p style="color:var(--muted); text-align:center; padding: 20px;">No leads captured yet.</p>';
+          return;
+        }
+
+        container.innerHTML = data.leads.reverse().map(lead => `
+          <div class="result-row">
+            <div>
+              <div style="font-weight:600; color:var(--text)">${lead.business || lead.business_name || 'Prospect'}</div>
+              <div style="font-size:0.75rem; color:var(--muted)">${lead.contact_name} | ${lead.email} | ${lead.tier || 'Starter'}</div>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center">
+              <span style="font-size:0.7rem; color:var(--muted)">${new Date(lead.date).toLocaleDateString()}</span>
+              <button class="btn-dl" onclick="deploySite('${lead.business || lead.business_name}', '${lead.email}', '${lead.tier}')">
+                Deliver Site
+              </button>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        showToast('Failed to load leads', 'error');
+      }
+    }
+
+    async function deploySite(business, email, tier) {
+      showToast(`Building site for ${business}...`, 'info');
+      try {
+        const res = await fetch('/api/deploy-site', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ business, email, tier })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`✅ Site ready in: /deployments/${data.folder}`, 'success');
+          window.open(data.url, '_blank');
+        } else {
+          showToast(data.error || 'Deployment failed', 'error');
+        }
+      } catch (err) {
+        showToast('Deployment error', 'error');
+      }
+    }
+
+    // Initial load
+    refreshLeads();
   </script>
 </body>
 

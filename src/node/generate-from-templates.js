@@ -133,4 +133,48 @@ async function main() {
   console.log('Deploy to Netlify Drop or any static host for shareable links.');
 }
 
-main().catch(console.error);
+// Export for use in server.js
+module.exports = {
+  generateForOne: async (options) => {
+    const { TargetBusiness, TargetOutput, isProduction, templateFilter } = options;
+    
+    const templates = getAvailableTemplates();
+    let templateFile = templates[0];
+    if (templateFilter) {
+      const match = templates.find(t => t.includes(templateFilter));
+      if (match) templateFile = match;
+    }
+    
+    // In production, we might use a more robust template or different logic
+    const templatePath = path.join(TEMPLATES_DIR, templateFile);
+    if (!fs.existsSync(templatePath)) throw new Error(`Template not found: ${templateFile}`);
+    
+    let html = fs.readFileSync(templatePath, 'utf8');
+    
+    // Minimal personalization for demo-style delivery
+    html = personalizeTemplate(html, { business_name: TargetBusiness }, 0);
+    
+    if (isProduction) {
+      // Add logic here to enable purchased features (Instagram, Menu, etc.)
+      // For now, we'll mark it as a 'Production Build'
+      html = html.replace('<!-- PRODUCTION_READY_PLACEHOLDER -->', `
+        <script>
+          console.log('--- PRODUCTION SITE ACTIVATED ---');
+          window.SITE_TIER = 'Growth'; // Extracted from lead data
+        </script>
+      `);
+    }
+
+    if (TargetOutput) {
+      const dir = path.dirname(TargetOutput);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(TargetOutput, html);
+    }
+
+    return { success: true, previewUrl: TargetOutput };
+  }
+};
+
+if (require.main === module) {
+  main().catch(console.error);
+}

@@ -6,6 +6,11 @@ import random
 import urllib.parse
 from dotenv import load_dotenv
 import requests
+# Add src/python to path so we can import qualifier.py
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, "..", ".."))
+sys.path.append(os.path.join(project_root, "src", "python"))
+
 from qualifier import clean_business_name
 
 # Load environment variables from .env file
@@ -16,6 +21,10 @@ VAPI_API_KEY = os.getenv('VAPI_API_KEY')
 VAPI_ASSISTANT_ID = os.getenv('VAPI_ASSISTANT_ID')
 VAPI_PHONE_NUMBER_ID = os.getenv('VAPI_PHONE_NUMBER_ID')
 
+# Global flag: set True via --all CLI arg to call every lead, not just HOT
+call_all = False
+
+
 def load_leads(csv_path):
     if not os.path.exists(csv_path):
         print(f"Error: Could not find '{csv_path}'.")
@@ -23,7 +32,9 @@ def load_leads(csv_path):
         
     with open(csv_path, 'r', encoding='utf-8') as f:
         reader = csv.DictReader(f)
-        return list(reader), reader.fieldnames
+        f_names = reader.fieldnames
+        headers = list(f_names) if f_names is not None else []
+        return list(reader), headers
 
 def dispatch_vapi_call(to_number, business_name, address, reason):
     try:
@@ -31,16 +42,21 @@ def dispatch_vapi_call(to_number, business_name, address, reason):
             print("  [Voice Skip] Vapi credentials not found in .env")
             return False
             
-        formatted_number = to_number.strip()
-        if not formatted_number.startswith("+"):
-            formatted_number = "+1" + "".join(filter(str.isdigit, formatted_number))
+        raw_digits = "".join(filter(str.isdigit, to_number or ""))
+        if raw_digits.startswith("1") and len(raw_digits) == 11:
+            formatted_number = "+" + raw_digits
+        else:
+            formatted_number = "+1" + raw_digits
             
         # Clean and shorten the business name and address for natural speech
         b_name = clean_business_name(business_name)
         
         # Reduce address to just city/state (e.g. "Houston, TX") for natural speech
-        addr_parts = [p.strip() for p in address.split(',')]
-        spoken_address = ', '.join(addr_parts[-2:]) if len(addr_parts) >= 2 else address
+        addr_parts: list[str] = [p.strip() for p in (address or "").split(',')]
+        if len(addr_parts) >= 2:
+            spoken_address: str = addr_parts[len(addr_parts)-2] + ", " + addr_parts[len(addr_parts)-1]
+        else:
+            spoken_address: str = (address or "")
         if "Broken website" in reason:
             first_msg = random.choice([
                 f"Hey, is this {b_name}? I was just trying to pull up your website and it looks like it might be down. Did you guys know about that?",
@@ -65,13 +81,15 @@ def dispatch_vapi_call(to_number, business_name, address, reason):
             f"You are Alex, a friendly and professional sales rep for a web design agency that builds websites for smoke shops. "
             f"You are calling {b_name}. Your goal is to build rapport, pitch the value of a professional website, "
             f"and close by getting their email address to send them a free custom demo. "
-            f"Flow: 1) Open with your first message. 2) Listen to their response. 3) Briefly explain the value: "
-            f"'We build fully custom websites for smoke shops — it takes about a week and most of our clients see more call-ins within the first month.' "
-            f"4) Ask if you can send them a free demo: 'I actually already put together a quick demo for your shop. Would it be cool if I sent it over?' "
+            f"IMPORTANT: Wait for the person to say hello or greet you first before speaking. Do NOT speak first. "
+            f"Flow: 1) After they greet you, open naturally: '{first_msg}' "
+            f"2) Listen to their response. 3) Briefly explain the value: "
+            f"'We build fully custom websites for smoke shops — it takes about a week, and most of our clients start seeing more walk-ins and call-ins within the first month.' "
+            f"4) Ask if you can send them a free demo: 'I actually already put together a quick demo site for {b_name} — it's got your shop name on it and everything. Would it be cool if I sent it over to you right now?' "
             f"5) If they say yes, ask for their email: 'Perfect — what email should I send it to?' "
-            f"6) Repeat the email back clearly to confirm it. "
-            f"7) Close warmly: 'Awesome, you'll have it in your inbox shortly. Talk soon!' "
-            f"Keep the tone conversational, friendly, and never pushy. If they say no or not interested, thank them and hang up."
+            f"6) Repeat the email back clearly, letter by letter if needed, to confirm it. "
+            f"7) Close with: 'Perfect! I\\'ll send that over right now while we\\'re on the phone. You should see a demo site with your shop name on it within the next minute or two. If you want to move forward, there\\'s a button on the page that takes you straight to checkout — no pressure, totally free to look. Sound good? Awesome — talk soon!' "
+            f"Keep the tone conversational, friendly, and never pushy. If they say no or not interested, thank them warmly and hang up."
         )
             
         url = "https://api.vapi.ai/call/phone"
@@ -87,7 +105,17 @@ def dispatch_vapi_call(to_number, business_name, address, reason):
                 "name": b_name
             },
             "assistantOverrides": {
-                "firstMessage": first_msg
+                "firstMessageMode": "assistant-waits-for-user",
+                "model": {
+                    "provider": "openai",
+                    "model": "gpt-4",
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": system_prompt
+                        }
+                    ]
+                }
             }
         }
         
@@ -130,11 +158,11 @@ def run_outreach(csv_path):
 
     print(f"Loaded {len(leads)} leads. Scanning for HOT targets...")
     
-    hot_count = 0
-    contacted_count = 0
+    hot_count: int = 0
+    contacted_count: int = 0
     
     # Add an Outreach Status column if it doesn't exist
-    if "Outreach Status" not in headers:
+    if headers is not None and "Outreach Status" not in headers:
          headers.append("Outreach Status")
          
     for lead in leads:
@@ -150,8 +178,9 @@ def run_outreach(csv_path):
         if lead.get('Outreach Status') == 'Contacted':
             continue
 
-        if tag == "HOT":
-            hot_count += 1
+        if tag == "HOT" or call_all:
+            # Explicitly type as int to satisfy IDE
+            hot_count = int(hot_count) + 1
             print(f"\n[HOT LEAD] {b_name} | Score: {score}")
             
             voice_sent = False
@@ -172,7 +201,7 @@ def run_outreach(csv_path):
             # Mark as contacted if we actually sent something
             if voice_sent:
                 lead['Outreach Status'] = 'Contacted'
-                contacted_count += 1
+                contacted_count = int(contacted_count) + 1
                 
             # Small delay to mimic human speed / avoid rapid fire blocks
             time.sleep(1)
@@ -193,8 +222,13 @@ def run_outreach(csv_path):
     print(f"Successfully Contacted: {contacted_count}")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python outreach_agent.py <path_to_qualified_csv>")
-        sys.exit(1)
-        
-    run_outreach(sys.argv[1])
+    import argparse
+    parser = argparse.ArgumentParser(description='Outreach Agent — dispatches Vapi calls to leads.')
+    parser.add_argument('csv_path', help='Path to the qualified leads CSV')
+    parser.add_argument('--all', action='store_true', dest='call_all',
+                        help='Call ALL leads, not just HOT ones')
+    args = parser.parse_args()
+    # Update module-level flag so run_outreach reads it correctly
+    call_all = args.call_all
+    run_outreach(args.csv_path)
+
