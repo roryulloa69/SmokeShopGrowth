@@ -1,5 +1,11 @@
 # SmokeShopGrowth — Lead Generation & Outreach Pipeline
 
+![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-blue)
+![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
+![Railway](https://img.shields.io/badge/Deploy-Railway-7B2FBE?logo=railway&logoColor=white)
+
 A complete lead generation and outreach system that scrapes Google Maps, audits websites, and delivers personalized multi-channel outreach.
 
 ## Architecture
@@ -75,17 +81,35 @@ npm run email
 docker-compose up
 ```
 
+## Deployment
+
+### Railway
+
+1. Push to GitHub and connect your repo in [Railway](https://railway.app)
+2. Set environment variables in Railway's dashboard (see table below)
+3. Railway uses the `Procfile` — no extra config needed
+4. Health checks hit `GET /health` automatically
+
+### Render
+
+Set the start command to `node server.js` and configure the same environment variables.
+
 ## Environment Variables
 
 | Variable | Service | Required |
 |----------|---------|----------|
 | `OPENAI_API_KEY` | OpenAI (outreach generation) | ✅ |
 | `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` | Email delivery | ✅ |
-| `VAPI_API_KEY`, `VAPI_ASSISTANT_ID` | AI phone calls | Optional |
+| `ELEVENLABS_API_KEY` | AI phone calls | Optional |
+| `ELEVENLABS_AGENT_ID` | ElevenLabs agent | Optional |
+| `ELEVENLABS_PHONE_NUMBER_ID` | ElevenLabs phone | Optional |
+| `VAPI_API_KEY`, `VAPI_ASSISTANT_ID` | AI phone calls (Vapi) | Optional |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | SMS follow-ups | Optional |
-| `ELEVENLABS_API_KEY` | Voice cloning | Optional |
 | `STRIPE_API_KEY` | Payments | Optional |
+| `MINIMAX_API_KEY` | Demo video generation | Optional |
 | `SPREADSHEET_ID` | Google Sheets export | Optional |
+| `API_KEY` | Webhook authentication | Recommended |
+| `NODE_ENV` | Runtime environment | Recommended |
 
 See `.env.example` for the full list.
 
@@ -96,11 +120,25 @@ See `.env.example` for the full list.
 | `npm start` | Start dashboard server |
 | `npm run pipeline` | Run full scrape → audit → outreach pipeline |
 | `npm run audit` | Audit lead websites with Lighthouse |
+| `npm run audit:fast` | Audit without Lighthouse (faster) |
 | `npm run outreach` | Generate personalized outreach messages |
 | `npm run email` | Send outreach emails |
 | `npm run vapi:call` | Make AI phone calls |
 | `npm test` | Run test suite |
 | `npm run lint` | Lint JS + Python |
+
+## API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Health check — returns uptime & job count |
+| `POST` | `/api/run` | Start a pipeline job |
+| `GET` | `/api/status/:jobId` | SSE stream for job progress |
+| `GET` | `/api/jobs` | List all jobs |
+| `GET` | `/api/download/:jobId/:file` | Download result CSV |
+| `POST` | `/api/create-checkout` | Create Stripe checkout session |
+| `POST` | `/webhook/call` | Trigger an ElevenLabs outbound call |
+| `POST` | `/api/template-submission` | Accept a lead form submission |
 
 ## Troubleshooting
 
@@ -110,9 +148,19 @@ See `.env.example` for the full list.
 | SMTP auth fails | Use Gmail App Password (not regular password) |
 | Lighthouse timeout | Use `npm run audit:fast` to skip Lighthouse |
 | Port 3000 in use | Set `PORT=3001` in `.env.local` |
+| Stripe not working | Ensure `STRIPE_API_KEY` is set in `.env.local` |
+| ElevenLabs call fails | Set `ELEVENLABS_AGENT_ID` and `ELEVENLABS_PHONE_NUMBER_ID` |
 
 ## Security
 
 - Never commit `.env`, `.env.local`, or `credentials.json`
 - All secrets should be in `.env.local` (gitignored)
+- Protect `/webhook/call` and `/api/create-checkout` with `API_KEY` header
 - See `docs/SECURITY.md` for full security guidelines
+
+## Contributing
+
+1. Fork the repo and create a feature branch: `git checkout -b feat/my-feature`
+2. Make your changes and add tests where applicable
+3. Run `npm run lint` and `npm test` before committing
+4. Open a pull request with a clear description of the change

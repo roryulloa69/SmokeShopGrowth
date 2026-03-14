@@ -25,8 +25,16 @@ const rateLimit = require('express-rate-limit');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// ──────────────────────────────────────────────
+// Stripe — initialise once at module level
+// ──────────────────────────────────────────────
+const stripe = process.env.STRIPE_API_KEY
+    ? require('stripe')(process.env.STRIPE_API_KEY)
+    : null;
+
 app.use(express.json());
 
+// Rate limiter for sensitive webhook/payment endpoints
 const webhookLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 50,
@@ -34,6 +42,16 @@ const webhookLimiter = rateLimit({
     legacyHeaders: false,
     message: { error: 'Too many requests, please try again later.' },
 });
+
+// Rate limiter for the pipeline — prevent accidental/malicious job floods
+const pipelineLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many pipeline requests. Please wait before starting another.' },
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ──────────────────────────────────────────────
@@ -41,14 +59,35 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ──────────────────────────────────────────────
 const jobs = new Map(); // jobId → { status, logs, city, type, files }
 
+const JOB_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+
 function makeJobId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
 
 // ──────────────────────────────────────────────
+// Periodic job cleanup — prevent unbounded memory growth
+// ──────────────────────────────────────────────
+setInterval(() => {
+    const cutoff = Date.now() - JOB_TTL_MS;
+    for (const [id, job] of jobs.entries()) {
+        if (job.status !== 'running' && job.logs.length > 0 && job.logs[0].ts < cutoff) {
+            jobs.delete(id);
+        }
+    }
+}, 15 * 60 * 1000); // run every 15 minutes
+
+// ──────────────────────────────────────────────
+// Route: health check (used by Railway / Render)
+// ──────────────────────────────────────────────
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok', uptime: Math.floor(process.uptime()), jobs: jobs.size });
+});
+
+// ──────────────────────────────────────────────
 // Route: start a pipeline job
 // ──────────────────────────────────────────────
-app.post('/api/run', (req, res) => {
+app.post('/api/run', pipelineLimiter, (req, res) => {
     let {
         city = '',
         bizType = 'smoke shop',
@@ -196,18 +235,19 @@ app.post('/webhook/call', webhookLimiter, async (req, res) => {
     }
 
     const apiKey = process.env.ELEVENLABS_API_KEY;
-    const agentId = process.env.ELEVENLABS_AGENT_ID || 'agent_0901kk068cm9fats660z2mzqwnhy';
+    const agentId = process.env.ELEVENLABS_AGENT_ID;
     const phoneNumberId = process.env.ELEVENLABS_PHONE_NUMBER_ID;
 
     if (!apiKey) {
         return res.status(500).json({ error: 'ELEVENLABS_API_KEY not set' });
     }
+    if (!agentId) {
+        return res.status(500).json({ error: 'ELEVENLABS_AGENT_ID not set. Please add it to your .env file.' });
+    }
     if (!phoneNumberId) {
         return res.status(500).json({ error: 'ELEVENLABS_PHONE_NUMBER_ID not set. Please add it to your .env file.' });
     }
 
-    // Note: This webhook call is not associated with a specific job, so we use a placeholder 'call'
-    // for the jobId. This log will not appear in the SSE stream for a pipeline job.
     pushLog('call', `Attempting call to ${phone} using agent ${agentId}…`, 'log');
 
     try {
@@ -221,7 +261,6 @@ app.post('/webhook/call', webhookLimiter, async (req, res) => {
                 agent_id: agentId,
                 agent_phone_number_id: phoneNumberId,
                 to_number: phone,
-                // Passing dynamic variables (might need to go inside conversation_initiation_client_data depending on your firm config)
                 dynamic_variables: { business_name, city, agent_name },
             }),
         });
@@ -464,8 +503,7 @@ async function exportToSheets(spreadsheetId, csvPath, sheetTitle) {
 // POST { email, business_name, city, tier }
 // Returns { checkout_url }
 app.post('/api/create-checkout', webhookLimiter, async (req, res) => {
-    const stripe = require('stripe')(process.env.STRIPE_API_KEY);
-    if (!process.env.STRIPE_API_KEY) {
+    if (!stripe) {
         return res.status(500).json({ error: 'STRIPE_API_KEY not set' });
     }
 
