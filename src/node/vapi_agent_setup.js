@@ -7,17 +7,30 @@
  *   node vapi_agent_setup.js --update  → updates existing assistant
  */
 
-require("dotenv").config();
-const axios = require("axios");
-const fs = require("fs");
-const path = require("path");
+import "dotenv/config";
+import axios from "axios";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+// ---------------------------------------------------------------------------- #
+//                                 CONFIGURATION                                #
+// ---------------------------------------------------------------------------- #
+
+import logger from "./utils/logger.js";
+
+// ---------------------------------------------------------------------------- #
+//                                 CONFIGURATION                                #
+// ---------------------------------------------------------------------------- #
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const VAPI_API_KEY = process.env.VAPI_API_KEY;
 const AGENT_NAME = process.env.AGENT_NAME || "Alex";
 const VAPI_ASSISTANT_ID = process.env.VAPI_ASSISTANT_ID; // set after first run
 
 if (!VAPI_API_KEY) {
-    console.error("VAPI_API_KEY not found in .env");
+    logger.error("VAPI_API_KEY not found in .env");
     process.exit(1);
 }
 
@@ -28,6 +41,7 @@ const vapi = axios.create({
         "Content-Type": "application/json",
     },
 });
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ASSISTANT CONFIGURATION
@@ -193,18 +207,18 @@ const assistantConfig = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function createAssistant() {
-    console.log("Creating Vapi assistant...");
+    logger.info("Creating Vapi assistant...");
     const res = await vapi.post("/assistant", assistantConfig);
     const assistant = res.data;
-    console.log(`Assistant created: ${assistant.id}`);
-    console.log(`   Name: ${assistant.name}`);
+    logger.info(`Assistant created: ${assistant.id}`);
+    logger.info(`   Name: ${assistant.name}`);
     return assistant;
 }
 
 async function updateAssistant(id) {
-    console.log(`Updating assistant ${id}...`);
+    logger.info(`Updating assistant ${id}...`);
     const res = await vapi.patch(`/assistant/${id}`, assistantConfig);
-    console.log(`Assistant updated: ${res.data.id}`);
+    logger.info(`Assistant updated: ${res.data.id}`);
     return res.data;
 }
 
@@ -220,23 +234,23 @@ async function main() {
             assistant = await createAssistant();
 
             // Append the assistant ID to .env
-            const envPath = path.join(__dirname, ".env");
+            const envPath = path.join(__dirname, "..", "..", ".env");
             const envContent = fs.readFileSync(envPath, "utf-8");
             if (!envContent.includes("VAPI_ASSISTANT_ID")) {
                 fs.appendFileSync(
                     envPath,
                     `\nVAPI_ASSISTANT_ID=${assistant.id}\n`
                 );
-                console.log("VAPI_ASSISTANT_ID saved to .env");
+                logger.info("VAPI_ASSISTANT_ID saved to .env");
             }
         }
 
-        console.log("\nNext steps:");
-        console.log("1. Add your VAPI_PHONE_NUMBER_ID to .env");
-        console.log("2. Deploy vapi_webhook.js and set WEBHOOK_URL in .env");
-        console.log('3. Run: node vapi_call.js --batch --file data/houston-tx/hot_leads.csv --dry-run');
+        logger.info("\nNext steps:");
+        logger.info("1. Add your VAPI_PHONE_NUMBER_ID to .env");
+        logger.info("2. Deploy vapi_webhook.js and set WEBHOOK_URL in .env");
+        logger.info('3. Run: node vapi_call.js --batch --file data/houston-tx/hot_leads.csv --dry-run');
     } catch (err) {
-        console.error("Error:", err.response?.data || err.message);
+        logger.error("Error:", err.response?.data || err.message);
         process.exit(1);
     }
 }

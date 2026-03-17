@@ -20,16 +20,15 @@
  *   --dry-run           Print first 3 messages to console, don't write CSV
  */
 
-'use strict';
-
-const fs = require('fs');
-const path = require('path');
-const { createReadStream, mkdirSync, writeFileSync } = require('fs');
-
-const { OpenAI } = require('openai');
-const csv = require('csv-parser');
-const { format } = require('@fast-csv/format');
-const pLimit = require('p-limit');
+import "dotenv/config";
+import fs from "fs";
+import path from "path";
+import { createReadStream, mkdirSync, writeFileSync } from "fs";
+import { OpenAI } from "openai";
+import csv from "csv-parser";
+import { format } from "@fast-csv/format";
+import pLimit from "p-limit";
+import logger from "./utils/logger.js";
 
 // ──────────────────────────────────────────────
 // CLI args
@@ -51,8 +50,7 @@ const BASE_URL = getArg('--base-url', process.env.BASE_URL || 'http://localhost:
 // ──────────────────────────────────────────────
 const apiKey = process.env.OPENAI_API_KEY;
 if (!apiKey) {
-    console.error('ERROR: OPENAI_API_KEY environment variable is not set.');
-    console.error('  Set it with: set OPENAI_API_KEY=sk-...');
+    logger.error('OPENAI_API_KEY environment variable is not set.');
     process.exit(1);
 }
 
@@ -61,14 +59,7 @@ const openai = new OpenAI({ apiKey });
 // ──────────────────────────────────────────────
 // Helpers
 // ──────────────────────────────────────────────
-function log(msg) {
-    const ts = new Date().toLocaleTimeString('en-US', { hour12: false });
-    console.log(`[${ts}] ${msg}`);
-}
-
-function sleep(ms) {
-    return new Promise(r => setTimeout(r, ms));
-}
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Build a structured prompt from the audited lead row.
@@ -145,17 +136,17 @@ async function generateMessage(lead, idx, total, retries = 3) {
             });
 
             const message = completion.choices[0]?.message?.content?.trim() || '';
-            log(`[${idx}/${total}] ✓ ${name}`);
+            logger.info(`[${idx}/${total}] ✓ ${name}`);
             return { ...lead, email_message: message };
 
         } catch (err) {
             const isRateLimit = err?.status === 429 || err?.code === 'rate_limit_exceeded';
             if (isRateLimit && attempt < retries) {
                 const wait = 2 ** attempt * 1500;
-                log(`[${idx}/${total}] Rate limited — waiting ${wait / 1000}s before retry ${attempt + 1}/${retries}…`);
+                logger.warn(`[${idx}/${total}] Rate limited — waiting ${wait / 1000}s before retry ${attempt + 1}/${retries}…`);
                 await sleep(wait);
             } else {
-                log(`[${idx}/${total}] ✗ ${name} — ${err?.message || err}`);
+                logger.error(`[${idx}/${total}] ✗ ${name} — ${err?.message || err}`);
                 return {
                     ...lead,
                     email_message: `[Error generating message: ${err?.message || 'unknown error'}]`,
@@ -203,29 +194,27 @@ function writeCsv(filePath, rows) {
 // Main
 // ──────────────────────────────────────────────
 async function main() {
-    console.log('='.repeat(60));
-    console.log(' Outreach Message Generator');
-    console.log(`  Input       : ${INPUT_FILE}`);
-    console.log(`  Output      : ${OUTPUT_FILE}`);
-    console.log(`  Model       : ${MODEL}`);
-    console.log(`  Concurrency : ${CONCURRENCY}`);
-    console.log(`  Dry run     : ${DRY_RUN}`);
-    console.log('='.repeat(60));
+    logger.info('Starting Outreach Message Generator');
+    logger.info(`Input: ${INPUT_FILE}`);
+    logger.info(`Output: ${OUTPUT_FILE}`);
+    logger.info(`Model: ${MODEL}`);
+    logger.info(`Concurrency: ${CONCURRENCY}`);
+    logger.info(`Dry run: ${DRY_RUN}`);
 
     // 1. Load leads
     let leads;
     try {
         leads = await readCsv(INPUT_FILE);
     } catch (err) {
-        console.error('ERROR:', err.message);
+        logger.error(err.message);
         process.exit(1);
     }
-    log(`Loaded ${leads.length} audited leads`);
+    logger.info(`Loaded ${leads.length} audited leads`);
 
     // 2. Filter — skip leads where generating a message wouldn't make sense
     const eligible = leads.filter(l => l.business_name && l.business_name.trim());
     if (eligible.length < leads.length) {
-        log(`Skipping ${leads.length - eligible.length} rows with no business name`);
+        logger.info(`Skipping ${leads.length - eligible.length} rows with no business name`);
     }
 
     // 3. Generate messages with concurrency control
@@ -239,22 +228,21 @@ async function main() {
 
     const results = await Promise.all(tasks);
     const elapsed = ((Date.now() - start) / 1000).toFixed(1);
-    log(`Generated ${results.length} messages in ${elapsed}s`);
+    logger.info(`Generated ${results.length} messages in ${elapsed}s`);
 
     // 4. Dry-run preview
     if (DRY_RUN) {
-        console.log('\n──── DRY RUN PREVIEW (first 3) ────\n');
+        logger.info('Dry run preview (first 3):');
         results.slice(0, 3).forEach(r => {
-            console.log(`Business: ${r.business_name}\n`);
-            console.log(r.email_message);
-            console.log('\n' + '─'.repeat(50) + '\n');
+            logger.info(`Business: ${r.business_name}`);
+            logger.info(r.email_message);
         });
         return;
     }
 
     // 5. Write CSV
     await writeCsv(OUTPUT_FILE, results);
-    log(`Saved to ${OUTPUT_FILE}`);
+    logger.info(`Saved to ${OUTPUT_FILE}`);
 
     // 6. Estimate cost
     const approxTokensPerCall = 400;
@@ -262,14 +250,13 @@ async function main() {
     const costPer1M = MODEL.includes('gpt-4o-mini') ? 0.15 : 2.50; // input price
     const estCost = ((totalTokens / 1_000_000) * costPer1M).toFixed(4);
 
-    console.log('\n📊 Summary:');
-    console.log(`  Messages generated : ${results.length}`);
-    console.log(`  Time elapsed       : ${elapsed}s`);
-    console.log(`  Est. cost (approx) : ~$${estCost} (${MODEL})`);
-    console.log('='.repeat(60));
+    logger.info('Summary:');
+    logger.info(`  Messages generated: ${results.length}`);
+    logger.info(`  Time elapsed: ${elapsed}s`);
+    logger.info(`  Est. cost (approx): ~$${estCost} (${MODEL})`);
 }
 
 main().catch(err => {
-    console.error('Unhandled error:', err);
+    logger.error('Unhandled error:', err);
     process.exit(1);
 });

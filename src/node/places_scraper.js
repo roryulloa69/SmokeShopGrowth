@@ -22,18 +22,18 @@
  * Requires: GOOGLE_PLACES_API_KEY in .env
  */
 
-require('dotenv').config();
-const axios = require('axios');
-const cheerio = require('cheerio');
-const fs = require('fs');
-const { log, sleep } = require('./utils/logger');
-const { readCsv, writeCsv, escapeCSV } = require('./utils/csv');
+import "dotenv/config";
+import axios from "axios";
+import cheerio from "cheerio";
+import fs from "fs";
+import logger from "./utils/logger.js";
+import { readCsv, writeCsv, escapeCSV } from "./utils/csv.js";
 
 const API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 
 if (!API_KEY) {
-  console.error('❌ GOOGLE_PLACES_API_KEY not found in .env');
-  process.exit(1);
+    logger.error("GOOGLE_PLACES_API_KEY not found in .env");
+    process.exit(1);
 }
 
 // ─── Config ───────────────────────────────────────────────
@@ -103,12 +103,28 @@ async function loadExisting(filePath) {
   return { rows, seenIds };
 }
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// ─── CSV Load/Save using shared utils ────────────────────
+async function loadExisting(filePath) {
+  const seenIds = new Set();
+  let rows = [];
+  try {
+    rows = await readCsv(filePath);
+    rows.forEach(r => { if (r.place_id) seenIds.add(r.place_id); });
+    logger.info(`Loaded ${rows.length} existing records from ${filePath}`);
+  } catch {
+    // File doesn't exist yet, that's fine
+  }
+  return { rows, seenIds };
+}
+
 function saveCSV(filePath, results) {
-  if (!results.length) { console.log('⚠️  No results to save.'); return; }
+  if (!results.length) { logger.warn('No results to save.'); return; }
   const header = CSV_FIELDS.map(escapeCSV).join(',');
   const lines = results.map((r) => CSV_FIELDS.map((f) => escapeCSV(r[f])).join(','));
   fs.writeFileSync(filePath, [header, ...lines].join('\n'), 'utf-8');
-  log(`💾 Saved ${results.length} records to ${filePath}`);
+  logger.info(`Saved ${results.length} records to ${filePath}`);
 }
 
 // ─── Places API ──────────────────────────────────────────
@@ -125,7 +141,7 @@ async function searchPlaces(query, location) {
     const data = response.data;
 
     if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-      console.error(`⚠️  API error: ${data.status} — ${data.error_message || ''}`);
+      logger.error(`API error: ${data.status} — ${data.error_message || ''}`);
       break;
     }
 
@@ -148,7 +164,7 @@ async function searchPlacesGrid(query, location) {
   const geoResp = await axios.get(geoUrl);
   const geoResult = geoResp.data.results?.[0];
   if (!geoResult) {
-    log('⚠️  Could not geocode city, falling back to text search');
+    logger.warn('Could not geocode city, falling back to text search');
     return searchPlaces(query, location);
   }
 
@@ -170,7 +186,7 @@ async function searchPlacesGrid(query, location) {
       const cellLat = viewport.southwest.lat + (latSpan / gridSize) * (row + 0.5);
       const cellLng = viewport.southwest.lng + (lngSpan / gridSize) * (col + 0.5);
 
-      log(`  Grid cell [${row},${col}] @ ${cellLat.toFixed(4)},${cellLng.toFixed(4)} r=${radius}m`);
+      logger.info(`Grid cell [${row},${col}] @ ${cellLat.toFixed(4)},${cellLng.toFixed(4)} r=${radius}m`);
 
       let nextPageToken = null;
       do {
@@ -198,7 +214,7 @@ async function searchPlacesGrid(query, location) {
     }
   }
 
-  log(`📍 Grid search found ${results.length} unique results across ${gridSize * gridSize} cells`);
+  logger.info(`Grid search found ${results.length} unique results across ${gridSize * gridSize} cells`);
   return results;
 }
 
@@ -208,7 +224,7 @@ async function getPlaceDetails(placeId) {
     const response = await axios.get(url);
     return response.data.result || {};
   } catch (err) {
-    console.error(`  ⚠️  Details error for ${placeId}: ${err.message}`);
+    logger.error(`Details error for ${placeId}: ${err.message}`);
     return {};
   }
 }
@@ -311,34 +327,32 @@ function scoreLead(biz) {
 async function main() {
   const opts = parseArgs();
 
-  console.log('═'.repeat(60));
-  console.log('  Google Places API Lead Scraper + Scorer');
-  console.log(`  City   : ${opts.city}`);
-  console.log(`  Type   : ${opts.bizType}`);
-  console.log(`  Max    : ${opts.maxResults}`);
-  console.log(`  Grid   : ${opts.grid ? 'enabled (Nearby Search)' : 'disabled (Text Search)'}`);
-  console.log(`  Output : ${opts.output}`);
-  console.log('═'.repeat(60));
+  logger.info('Starting Google Places API Lead Scraper + Scorer');
+  logger.info(`City: ${opts.city}`);
+  logger.info(`Type: ${opts.bizType}`);
+  logger.info(`Max Results: ${opts.maxResults}`);
+  logger.info(`Grid Search: ${opts.grid ? 'enabled' : 'disabled'}`);
+  logger.info(`Output File: ${opts.output}`);
 
   const { rows: existingRows, seenIds } = await loadExisting(opts.output);
   const results = [...existingRows];
   const startTime = Date.now();
 
   // Phase 1: Search (Text Search or Grid-based Nearby Search)
-  log(`\n🔍 Searching: "${opts.bizType}" in ${opts.city}...`);
+  logger.info(`Searching for "${opts.bizType}" in ${opts.city}...`);
   const places = opts.grid
     ? await searchPlacesGrid(opts.bizType, opts.city)
     : await searchPlaces(opts.bizType, opts.city);
-  log(`📋 Found ${places.length} results from ${opts.grid ? 'Grid Nearby' : 'Text'} Search API`);
+  logger.info(`Found ${places.length} results from ${opts.grid ? 'Grid Nearby' : 'Text'} Search API`);
 
   const newPlaces = places.filter((p) => !seenIds.has(p.place_id));
   const budget = Math.min(newPlaces.length, Math.max(0, opts.maxResults - existingRows.length));
   const toProcess = newPlaces.slice(0, budget);
 
-  log(`🆕 ${toProcess.length} new businesses to process (${existingRows.length} already scraped)\n`);
+  logger.info(`${toProcess.length} new businesses to process (${existingRows.length} already scraped)`);
 
   if (!toProcess.length) {
-    log('⚠️  No new listings. Exiting.');
+    logger.info('No new listings to process. Exiting.');
     return;
   }
 
@@ -398,13 +412,13 @@ async function main() {
 
       const icon = score >= 50 ? '🔥' : score >= 30 ? '⚡' : '✓';
       if (score >= 50) hotCount++;
-      const emailTag = biz.email ? ` 📧 ${biz.email}` : '';
-      log(`  [${idx}/${toProcess.length}] ${icon} ${biz.business_name} | Score: ${score}${emailTag} | ${issues || 'clean'}`);
+      const emailTag = biz.email ? ` | 📧 ${biz.email}` : '';
+      logger.info(`[${idx}/${toProcess.length}] ${icon} ${biz.business_name} | Score: ${score}${emailTag} | ${issues || 'clean'}`);
 
       if (idx % 20 === 0) saveCSV(opts.output, results);
       await sleep(150);
     } catch (err) {
-      log(`  [${idx}/${toProcess.length}] ⚠️  Error: ${err.message}`);
+      logger.error(`[${idx}/${toProcess.length}] Error: ${err.message}`);
     }
   }
 
@@ -412,17 +426,15 @@ async function main() {
 
   const emailCount = results.filter(r => r.email).length;
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-  console.log(`\n${'═'.repeat(60)}`);
-  console.log(`  ✅ Done in ${elapsed}s`);
-  console.log(`  📊 Total records  : ${results.length}`);
-  console.log(`  🔥 Hot prospects  : ${hotCount} (score ≥ 50)`);
-  console.log(`  📧 Emails found   : ${emailCount}`);
-  console.log('═'.repeat(60));
+  logger.info(`Scraping complete in ${elapsed}s`);
+  logger.info(`Total records: ${results.length}`);
+  logger.info(`Hot prospects (score >= 50): ${hotCount}`);
+  logger.info(`Emails found: ${emailCount}`);
 }
 
 // Export for testing
-module.exports = { scoreLead, getPhotoUrl };
+export { scoreLead, getPhotoUrl };
 
-if (require.main === module) {
-  main().catch(console.error);
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch((err) => logger.error(err));
 }
