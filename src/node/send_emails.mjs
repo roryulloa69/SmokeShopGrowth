@@ -2,22 +2,19 @@
 /**
  * Email Sender
  * ============
- * Reads data/{city}/outreach_messages.csv and sends each personalised email
- * via SMTP (nodemailer). Logs results to logs/email_log.csv.
+ * Reads data/{city}/outreach_messages.csv and sends each personalized email
+ * via SendGrid. Logs results to logs/email_log.csv.
  *
  * Required env vars:
- *   SMTP_HOST     e.g. smtp.gmail.com
- *   SMTP_PORT     e.g. 587
- *   SMTP_USER     e.g. you@gmail.com
- *   SMTP_PASS     App password (NOT your main password)
- *   FROM_EMAIL    Sender address shown to recipient
- *   FROM_NAME     Sender display name (e.g. "Your Name | Web Design")
+ *   SENDGRID_API_KEY  e.g. SG.xxxxx
+ *   FROM_EMAIL        Sender address shown to recipient
+ *   FROM_NAME         Sender display name (e.g. "Your Name | Web Design")
  *
  * Optional env vars:
- *   REPLY_TO      Reply-to address (defaults to FROM_EMAIL)
+ *   REPLY_TO          Reply-to address (defaults to FROM_EMAIL)
  *
  * Usage:
- *   node send_emails.js --input data/houston/outreach_messages.csv [--log logs/email_log.csv] [--dry-run] [--delay-ms 2000]
+ *   node send_emails.mjs --input data/houston/outreach_messages.csv [--log logs/email_log.csv] [--dry-run] [--delay-ms 2000]
  */
 
 'use strict';
@@ -26,7 +23,7 @@ import fs from 'fs';
 import path from 'path';
 import { createReadStream, mkdirSync, appendFileSync, existsSync } from 'fs';
 
-import nodemailer from 'nodemailer';
+import sgMail from '@sendgrid/mail';
 import csv from 'csv-parser';
 import { format } from '@fast-csv/format';
 
@@ -45,21 +42,19 @@ const DELAY_MS = parseInt(getArg('--delay-ms', '2000'), 10); // courtesy delay b
 // ──────────────────────────────────────────────
 // Env validation
 // ──────────────────────────────────────────────
-const REQUIRED_ENV = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'FROM_EMAIL'];
+const REQUIRED_ENV = ['SENDGRID_API_KEY', 'FROM_EMAIL'];
 
 function validateEnv() {
     const missing = REQUIRED_ENV.filter(k => !process.env[k]);
     if (missing.length) {
         console.error('ERROR: Missing required environment variables:');
         missing.forEach(k => console.error(`  ${k}`));
-        console.error('\nSet them in your shell:');
-        console.error('  set SMTP_HOST=smtp.gmail.com');
-        console.error('  set SMTP_PORT=587');
-        console.error('  set SMTP_USER=you@gmail.com');
-        console.error('  set SMTP_PASS=your_app_password');
-        console.error('  set FROM_EMAIL=you@gmail.com');
+        console.error('\nSet them in your .env or shell:');
+        console.error('  export SENDGRID_API_KEY=SG.xxxxx');
+        console.error('  export FROM_EMAIL=you@gmail.com');
         process.exit(1);
     }
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 }
 
 // ──────────────────────────────────────────────
@@ -116,28 +111,27 @@ function writeLogRow(filePath, { businessName, email, status, error = '' }) {
 }
 
 // ──────────────────────────────────────────────
-// Mailer
+// SendGrid Mailer
 // ──────────────────────────────────────────────
-function createTransport() {
-    return nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT, 10),
-        secure: process.env.SMTP_PORT === '465',
-        auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
-        },
-    });
-}
-
-async function sendEmail(transporter, { to, subject, text, fromName, fromEmail, replyTo }) {
-    await transporter.sendMail({
-        from: `"${fromName}" <${fromEmail}>`,
-        replyTo: replyTo || fromEmail,
+async function sendEmailViaSendGrid({ to, subject, text, fromName, fromEmail, replyTo }) {
+    const msg = {
         to,
+        from: {
+            email: fromEmail,
+            name: fromName,
+        },
+        replyTo: replyTo || fromEmail,
         subject,
         text,
-    });
+        // Optional: add HTML version
+        html: `<p>${text.replace(/\n/g, '<br>')}</p>`,
+    };
+
+    try {
+        await sgMail.send(msg);
+    } catch (error) {
+        throw new Error(`SendGrid error: ${error.message || error}`);
+    }
 }
 
 // ──────────────────────────────────────────────
@@ -171,8 +165,6 @@ async function main() {
 
     initLog(LOG_FILE);
 
-    const transporter = DRY_RUN ? null : createTransport();
-
     const stats = { sent: 0, skipped: 0, failed: 0 };
     const total = leads.length;
 
@@ -202,14 +194,14 @@ async function main() {
         }
 
         try {
-            await sendEmail(transporter, {
+            await sendEmailViaSendGrid({
                 to: recipient, subject, text: message, fromName, fromEmail, replyTo,
             });
-            log(`  Γ£ô Sent to ${recipient}`);
+            log(`  ✓ Sent to ${recipient}`);
             writeLogRow(LOG_FILE, { businessName, email: recipient, status: 'sent' });
             stats.sent++;
         } catch (err) {
-            log(`  Γ✗ Failed: ${err.message}`);
+            log(`  ✗ Failed: ${err.message}`);
             writeLogRow(LOG_FILE, { businessName, email: recipient, status: 'failed', error: err.message });
             stats.failed++;
         }
