@@ -529,6 +529,14 @@ async function main() {
 
         // Append new results to the output file
         await writeCsv(OUTPUT_FILE, [...existingRows, ...auditedLeads]);
+    } else if (existingRows.length > 0) {
+        // Write existing results even if nothing new to audit
+        await writeCsv(OUTPUT_FILE, existingRows);
+    } else if (leads.length > 0) {
+        // No websitesin leads, but write input leads to output for continuity
+        // (downstream steps can work with leads even without audit data)
+        await writeCsv(OUTPUT_FILE, leads);
+        logger.info(`No websites found in leads, wrote input to output for continuity.`);
     }
 }
 
