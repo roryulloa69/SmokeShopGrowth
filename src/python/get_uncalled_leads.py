@@ -18,11 +18,11 @@ Example:
     python src/python/get_uncalled_leads.py data/houston-tx_qualified.csv data/uncalled_leads.csv
 """
 
-import os
-import json
 import csv
-import sys
+import json
+import os
 import re
+import sys
 
 # Path to the log file that contains records of all call attempts.
 # This is based on the path in `src/node/vapi_call.js`.
@@ -58,7 +58,7 @@ def get_called_phones() -> set[str]:
         print(f"Info: Call log not found at '{CALL_LOG_PATH}'. Assuming no calls made yet.")
         return called_phones
 
-    with open(CALL_LOG_PATH, "r", encoding="utf-8") as f:
+    with open(CALL_LOG_PATH, encoding="utf-8") as f:
         for line in f:
             try:
                 entry = json.loads(line)
@@ -69,7 +69,7 @@ def get_called_phones() -> set[str]:
                         called_phones.add(normalized)
             except json.JSONDecodeError:
                 continue # Ignore malformed lines
-    
+
     print(f"Found {len(called_phones)} unique numbers in the call log.")
     return called_phones
 
@@ -83,15 +83,15 @@ def filter_uncalled_leads(input_csv_path: str, output_csv_path: str):
 
     called_phones = get_called_phones()
     uncalled_leads = []
-    
-    with open(input_csv_path, "r", encoding="utf-8-sig") as f:
+
+    with open(input_csv_path, encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         fieldnames = reader.fieldnames or []
-        
+
         for row in reader:
             phone = row.get("phone", row.get("Phone", row.get("telephone", "")))
             normalized_phone = normalize_phone(phone)
-            
+
             if normalized_phone and normalized_phone not in called_phones:
                 uncalled_leads.append(row)
 
@@ -100,12 +100,12 @@ def filter_uncalled_leads(input_csv_path: str, output_csv_path: str):
         return
 
     print(f"Found {len(uncalled_leads)} uncalled leads. Saving to '{output_csv_path}'...")
-    
+
     with open(output_csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(uncalled_leads)
-        
+
     print(f"Successfully created '{output_csv_path}'.")
 
 def main():
@@ -116,10 +116,10 @@ def main():
         print("Usage: python get_uncalled_leads.py <input_leads.csv> <output_uncalled.csv>")
         print("\nExample: python src/python/get_uncalled_leads.py data/houston-tx/leads_qualified.csv data/uncalled_leads.csv")
         sys.exit(1)
-        
+
     input_file = sys.argv[1]
     output_file = sys.argv[2]
-    
+
     filter_uncalled_leads(input_file, output_file)
 
 if __name__ == "__main__":

@@ -6,3 +6,4 @@ google-auth==2.29.0
 google-auth-oauthlib==1.2.0
 twilio==9.3.2
 requests==2.32.3
+ruff==0.9.10

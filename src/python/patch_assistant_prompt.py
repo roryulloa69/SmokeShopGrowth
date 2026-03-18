@@ -1,4 +1,5 @@
 import os
+
 import requests
 
 API_KEY = os.environ.get("VAPI_API_KEY", "")
@@ -71,7 +72,7 @@ def patch_assistant():
     if get_res.status_code != 200:
         print(f"Could not fetch assistant: {get_res.text}")
         return
-    
+
     current = get_res.json()
     model_cfg = current.get("model", {})
     provider = model_cfg.get("provider", "openai")
@@ -88,9 +89,9 @@ def patch_assistant():
             ]
         }
     }
-    
+
     res = requests.patch(url, headers=headers, json=payload)
-    
+
     if res.status_code in [200, 201]:
         print("Assistant system prompt updated successfully!")
         print("The AI will now: hook them → pitch value → ask permission → collect email → confirm → close.")

@@ -1,25 +1,25 @@
 import os
-import json
 import smtplib
 from email.message import EmailMessage
-from flask import Flask, request, jsonify
-import stripe
-from deploy_agent import deploy_shop_website
-from delivery_agent import trigger_delivery_flow
-from error_handler import log_failed_job
-from crm import lookup_lead_from_crm, update_crm_payment, update_crm_deployed
-from config import (
-    STRIPE_API_KEY, 
-    STRIPE_WEBHOOK_SECRET, 
-    DEMO_BASE_URL, 
-    SMTP_HOST, 
-    SMTP_PORT, 
-    SMTP_USER, 
-    SMTP_PASS, 
-    SENDER_NAME
-)
 
+import stripe
+from crm import lookup_lead_from_crm, update_crm_deployed, update_crm_payment
+from delivery_agent import trigger_delivery_flow
+from deploy_agent import deploy_shop_website
+from error_handler import log_failed_job
+from flask import Flask, jsonify, request
 from logger import get_logger
+
+from config import (
+    DEMO_BASE_URL,
+    SENDER_NAME,
+    SMTP_HOST,
+    SMTP_PASS,
+    SMTP_PORT,
+    SMTP_USER,
+    STRIPE_API_KEY,
+    STRIPE_WEBHOOK_SECRET,
+)
 
 log = get_logger(__name__)
 
@@ -38,7 +38,7 @@ def create_checkout_session(lead_email, business_name, city, tier="growth"):
     """
     Create a Stripe Checkout Session for a lead.
     Returns the checkout URL, or None on failure.
-    
+
     tier: 'starter' | 'growth' | 'pro'
     """
     TIER_PRICES = {
@@ -46,9 +46,9 @@ def create_checkout_session(lead_email, business_name, city, tier="growth"):
         "growth":  {"setup": 29900, "name": "Growth Website"},
         "pro":     {"setup": 49900, "name": "Pro Website"},
     }
-    
+
     selected = TIER_PRICES.get(tier, TIER_PRICES["growth"])
-    
+
     try:
         session = stripe.checkout.Session.create(
             payment_method_types=["card"],
@@ -171,7 +171,7 @@ def trigger_site_deployment(email, ref_id, stripe_metadata=None):
 
     # 2. Fallback: use Stripe checkout metadata if CRM lookup failed
     if not lead_data and stripe_metadata:
-        log.info(f"[DEPLOY] CRM lookup failed — using Stripe metadata as fallback.")
+        log.info("[DEPLOY] CRM lookup failed — using Stripe metadata as fallback.")
         lead_data = {
             "business_name": stripe_metadata.get("business_name", "Smoke Shop"),
             "city": stripe_metadata.get("city", "Houston"),
@@ -251,7 +251,7 @@ def stripe_webhook():
         client_reference_id = session.get('client_reference_id')
         stripe_metadata = session.get('metadata', {})
 
-        log.info(f"✅ Payment Received via Stripe!")
+        log.info("✅ Payment Received via Stripe!")
         log.info(f"  - Customer: {customer_email}")
         log.info(f"  - Amount: ${amount_paid:.2f}")
         log.info(f"  - Ref ID: {client_reference_id}")
@@ -269,7 +269,7 @@ def stripe_webhook():
 def create_checkout():
     """
     Create a Stripe Checkout Session for a specific lead.
-    
+
     POST body:
     {
         "email": "owner@shop.com",
@@ -277,7 +277,7 @@ def create_checkout():
         "city": "Houston",
         "tier": "growth"  // optional: starter | growth | pro
     }
-    
+
     Returns: { "checkout_url": "https://checkout.stripe.com/..." }
     """
     data = request.json or {}

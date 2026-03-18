@@ -36,6 +36,20 @@ module.exports = [
         },
     },
     {
+        files: ['**/*.mjs'],
+        languageOptions: {
+            sourceType: 'module',
+        },
+    },
+    {
+        files: ['src/node/spreadsheet_cleaner_tool.js'],
+        languageOptions: {
+            globals: {
+                SpreadsheetApp: 'readonly',
+            },
+        },
+    },
+    {
         ignores: ['node_modules/', 'demo/', 'deployments/', 'templates/', 'archive/'],
     },
 ];

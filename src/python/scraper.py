@@ -22,25 +22,23 @@ import logging
 import os
 import random
 import re
-import sys
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Optional
 from urllib.parse import quote_plus
 
 import pandas as pd
 from playwright.async_api import (
     Browser,
     Page,
-    Playwright,
     async_playwright,
+)
+from playwright.async_api import (
     TimeoutError as PlaywrightTimeout,
 )
 from tqdm import tqdm
 
 import config
-
 
 # ──────────────────────────────────────────────
 # Logging

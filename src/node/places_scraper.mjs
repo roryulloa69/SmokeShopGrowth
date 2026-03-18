@@ -26,6 +26,7 @@ import "dotenv/config";
 import axios from "axios";
 import cheerio from "cheerio";
 import fs from "fs";
+import { fileURLToPath } from "url";
 import logger from "./utils/logger.mjs";
 import { readCsv, writeCsv, escapeCSV } from "./utils/csv.mjs";
 
@@ -87,20 +88,6 @@ function parseArgs() {
     process.exit(1);
   }
   return opts;
-}
-
-// ─── CSV Load/Save using shared utils ────────────────────
-async function loadExisting(filePath) {
-  const seenIds = new Set();
-  let rows = [];
-  try {
-    rows = await readCsv(filePath);
-    rows.forEach(r => { if (r.place_id) seenIds.add(r.place_id); });
-    log(`📂 Loaded ${rows.length} existing records from ${filePath}`);
-  } catch {
-    // File doesn't exist yet, that's fine
-  }
-  return { rows, seenIds };
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -267,7 +254,7 @@ async function auditSEO(url) {
 
     // Scan visible text for email patterns
     const bodyText = $('body').text() || '';
-    const emailRegex = /[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}/gi;
+    const emailRegex = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
     const textEmails = bodyText.match(emailRegex) || [];
     textEmails.forEach(e => emails.add(e.toLowerCase()));
 

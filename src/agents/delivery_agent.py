@@ -1,9 +1,10 @@
-import os
 import json
+import os
 import smtplib
-import requests
-from email.message import EmailMessage
 from datetime import datetime, timezone
+from email.message import EmailMessage
+
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -139,7 +140,7 @@ def enroll_in_upsell_drip(client_name, client_email):
     queue_data = []
     if os.path.exists(UPSELL_QUEUE_FILE):
         try:
-            with open(UPSELL_QUEUE_FILE, 'r') as f:
+            with open(UPSELL_QUEUE_FILE) as f:
                 queue_data = json.load(f)
         except Exception:
             queue_data = []

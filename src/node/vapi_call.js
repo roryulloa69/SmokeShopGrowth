@@ -67,7 +67,9 @@ function loadCalledPhones() {
             if (entry.status === "ok") {
                 called.set(entry.phone, entry);
             }
-        } catch {}
+        } catch {
+            // Ignore malformed log lines from interrupted writes.
+        }
     }
     return called;
 }
