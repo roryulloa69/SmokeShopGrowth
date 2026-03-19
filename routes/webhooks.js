@@ -108,7 +108,7 @@ router.post('/webhook/vapi', async (req, res) => {
         const messages = artifact?.messages || [];
         for (const msg of messages) {
             const text = (msg.message || msg.content || '').toLowerCase();
-            const emailMatch = text.match(/[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}/i);
+            const emailMatch = text.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i);
             if (emailMatch) {
                 collected_email = emailMatch[0];
                 break;

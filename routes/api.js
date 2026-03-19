@@ -29,7 +29,7 @@ router.post('/api/run', pipelineRunLimiter, apiKeyAuth, (req, res) => {
     if (!city || city.length < MIN_CITY_LEN || city.length > MAX_CITY_LEN) {
         return res.status(400).json({ error: `City must be ${MIN_CITY_LEN}-${MAX_CITY_LEN} characters.` });
     }
-    if (!/^[a-zA-Z0-9\s\-]+$/.test(city)) {
+    if (!/^[a-zA-Z0-9\s-]+$/.test(city)) {
         return res.status(400).json({ error: 'City contains invalid characters (only letters, numbers, spaces, hyphens allowed).' });
     }
 
