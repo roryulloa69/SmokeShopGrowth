@@ -1,1941 +1,1137 @@
-<!-- Quick demo preview template (used by GET /demo). Production template is in template/index.html -->
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{BUSINESS_NAME}} — Premium Smoke Shop · {{CITY}}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap"
-    rel="stylesheet" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+  <title>{{BUSINESS_NAME}} | Premium Smoke Shop in {{CITY}}, {{STATE}}</title>
+  <meta name="description" content="{{BUSINESS_NAME}} — {{CITY}}'s premier smoke shop. Premium glass, vaporizers, CBD, kratom, and accessories. Visit us today." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
   <style>
+    /* ═══════════════════════════════════════════════
+       {{BUSINESS_NAME}} — PREMIUM THEME
+       Built by Smoke Shop Growth
+       ═══════════════════════════════════════════════ */
     :root {
-      --purple: #bc13fe;
-      --purple-d: #5a1a8a;
-      --purple-l: #d880ff;
-      --green: #39ff14;
-      --green-d: #1e7a00;
-      --green-l: #a2ff8a;
-      --gold: #d4a520;
-      --gold-l: #f5c842;
-      --bg: #07040a;
-      --bg2: #0e0a16;
-      --bg3: #160d24;
-      --text: #f0ebf8;
-      --text-dim: rgba(240, 235, 248, 0.6);
-      --border: rgba(188, 19, 254, 0.15);
-      --glass: rgba(14, 10, 22, 0.75);
+      --primary: #e63946;
+      --primary-glow: rgba(230,57,70,0.25);
+      --primary-hover: #c1121f;
+      --gold: #d4a853;
+      --gold-glow: rgba(212,168,83,0.2);
+      --bg-dark: #0a0a0a;
+      --bg-card: #111111;
+      --bg-elevated: #1a1a1a;
+      --border: #222222;
+      --text: #f5f5f5;
+      --text-muted: #999999;
+      --text-dim: #666666;
+      --radius: 16px;
     }
 
-    *,
-    *::before,
-    *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
 
     body {
-      background: var(--bg);
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg-dark);
       color: var(--text);
-      font-family: 'Inter', sans-serif;
-      font-weight: 300;
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
     }
 
-    /* TEXTURE OVERLAY */
+    /* ── Animations ─────────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(40px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes shimmer {
+      0% { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-12px); }
+    }
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 20px var(--primary-glow); }
+      50% { box-shadow: 0 0 40px var(--primary-glow), 0 0 80px rgba(230,57,70,0.1); }
+    }
+    @keyframes grain {
+      0%, 100% { transform: translate(0,0); }
+      10% { transform: translate(-5%,-10%); }
+      30% { transform: translate(3%,-15%); }
+      50% { transform: translate(-10%,5%); }
+      70% { transform: translate(8%,10%); }
+      90% { transform: translate(-3%,8%); }
+    }
+    @keyframes smoke-drift {
+      0% { transform: translateY(0) scale(1); opacity: 0.15; }
+      50% { transform: translateY(-100px) scale(1.5); opacity: 0.05; }
+      100% { transform: translateY(-200px) scale(2); opacity: 0; }
+    }
+
+    .animate-up { animation: fadeUp 0.8s ease-out both; }
+    .animate-in { animation: fadeIn 0.6s ease-out both; }
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.3s; }
+    .delay-4 { animation-delay: 0.4s; }
+    .delay-5 { animation-delay: 0.5s; }
+
+    /* ── Film Grain Overlay ─────────────────────── */
     body::before {
-      content: "";
+      content: '';
       position: fixed;
-      inset: 0;
-      background: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-      opacity: 0.04;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
       pointer-events: none;
       z-index: 9999;
+      animation: grain 8s steps(10) infinite;
     }
 
-    ::-webkit-scrollbar {
-      width: 5px;
+    /* ── Utility ────────────────────────────────── */
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+    .section { padding: 100px 0; position: relative; }
+    .text-gradient {
+      background: linear-gradient(135deg, var(--primary), var(--gold));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .text-shimmer {
+      background: linear-gradient(90deg, var(--gold) 0%, #fff 25%, var(--gold) 50%, #fff 75%, var(--gold) 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: shimmer 4s linear infinite;
     }
 
-    ::-webkit-scrollbar-track {
-      background: var(--bg);
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: var(--purple);
-      border-radius: 10px;
-    }
-
-    /* AGE GATE */
-    #age-gate {
-      position: fixed;
-      inset: 0;
-      background: var(--bg);
-      background-image: radial-gradient(circle at 50% 50%, rgba(90, 26, 138, 0.15), transparent 70%);
-      z-index: 1000;
-      display: flex;
+    /* ── Buttons ────────────────────────────────── */
+    .btn {
+      display: inline-flex;
       align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      padding: 2rem;
-    }
-
-    .ag-name {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(4rem, 12vw, 8rem);
-      line-height: .88;
-      text-align: center;
-      margin-bottom: .5rem;
-    }
-
-    .ag-line1 {
-      color: var(--purple-l);
-      -webkit-text-stroke: 2px var(--purple-d);
-    }
-
-    .ag-line2 {
-      color: var(--green-l);
-      -webkit-text-stroke: 2px var(--green-d);
-    }
-
-    .ag-sub {
-      font-family: 'Oswald', sans-serif;
-      font-size: .75rem;
-      letter-spacing: .4em;
-      text-transform: uppercase;
-      color: var(--gold);
-      text-align: center;
-      margin-bottom: 2.5rem;
-    }
-
-    .ag-divider {
-      width: 100px;
-      height: 1px;
-      background: linear-gradient(to right, transparent, var(--purple), transparent);
-      margin: 0 auto 2.5rem;
-    }
-
-    .ag-q {
-      font-family: 'Oswald', sans-serif;
-      font-size: 1.4rem;
-      letter-spacing: .06em;
-      margin-bottom: .6rem;
-      text-align: center;
-    }
-
-    .ag-note {
-      font-size: .72rem;
-      letter-spacing: .15em;
-      text-transform: uppercase;
-      color: var(--text-dim);
-      margin-bottom: 2.5rem;
-      text-align: center;
-    }
-
-    .ag-btns {
-      display: flex;
-      gap: 1rem;
-    }
-
-    .ag-btn {
-      padding: .85rem 2.8rem;
-      font-family: 'Oswald', sans-serif;
-      font-size: .85rem;
-      letter-spacing: .25em;
-      text-transform: uppercase;
-      border: none;
+      gap: 8px;
+      padding: 16px 32px;
+      border-radius: 50px;
+      font-weight: 600;
+      font-size: 15px;
+      text-decoration: none;
+      transition: all 0.3s ease;
       cursor: pointer;
-      font-weight: 500;
-      transition: all .3s;
+      border: none;
+      letter-spacing: 0.3px;
     }
-
-    .ag-yes {
-      background: linear-gradient(135deg, var(--purple-d), var(--purple-l));
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
       color: #fff;
-      box-shadow: 0 0 30px rgba(123, 47, 191, .4);
+      box-shadow: 0 4px 20px var(--primary-glow);
     }
-
-    .ag-yes:hover {
-      box-shadow: 0 0 50px rgba(160, 80, 224, .6);
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 40px var(--primary-glow);
+    }
+    .btn-gold {
+      background: linear-gradient(135deg, var(--gold), #b8860b);
+      color: #0a0a0a;
+      box-shadow: 0 4px 20px var(--gold-glow);
+    }
+    .btn-gold:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 40px var(--gold-glow);
+    }
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border: 1.5px solid var(--border);
+    }
+    .btn-outline:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      transform: translateY(-2px);
+    }
+    .btn-glass {
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: var(--text);
+    }
+    .btn-glass:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.2);
       transform: translateY(-2px);
     }
 
-    .ag-no {
-      background: transparent;
-      color: var(--text-dim);
-      border: 1px solid rgba(240, 235, 248, .15);
+    /* ── Age Verification Modal ─────────────────── */
+    .age-gate {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: rgba(0,0,0,0.95);
+      backdrop-filter: blur(30px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.4s ease;
     }
-
-    .ag-no:hover {
-      border-color: rgba(240, 235, 248, .4);
-      color: var(--text);
-    }
-
-    .ag-disc {
-      position: absolute;
-      bottom: 1.5rem;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: .6rem;
-      letter-spacing: .06em;
-      color: rgba(240, 235, 248, .2);
+    .age-gate-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 48px;
       text-align: center;
+      max-width: 440px;
       width: 90%;
-      max-width: 480px;
-      line-height: 1.8;
     }
+    .age-gate-box h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      margin-bottom: 12px;
+    }
+    .age-gate-box p {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 32px;
+      line-height: 1.6;
+    }
+    .age-gate-buttons { display: flex; gap: 12px; justify-content: center; }
+    .age-gate .btn { padding: 14px 40px; font-size: 16px; }
 
-    /* NAV */
+    /* ── Navigation ─────────────────────────────── */
     nav {
       position: fixed;
       top: 0;
       left: 0;
       right: 0;
-      z-index: 100;
-      padding: 1.5rem 5vw;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      transition: all .4s;
+      z-index: 1000;
+      padding: 20px 0;
+      transition: all 0.4s ease;
     }
-
     nav.scrolled {
-      background: var(--glass);
-      -webkit-backdrop-filter: blur(24px);
-      backdrop-filter: blur(24px);
-      padding: 0.8rem 5vw;
+      background: rgba(10,10,10,0.9);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--border);
+      padding: 12px 0;
     }
-
-    .nav-brand {
+    .nav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
       display: flex;
-      flex-direction: column;
-      line-height: .85;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .nav-brand {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text);
       text-decoration: none;
+      letter-spacing: -0.3px;
     }
-
-    .nf {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.6rem;
-      color: var(--purple-l);
-    }
-
-    .nd {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.6rem;
-      color: var(--green-l);
-    }
-
     .nav-links {
       display: flex;
-      gap: 2.5rem;
+      align-items: center;
+      gap: 32px;
       list-style: none;
     }
-
     .nav-links a {
-      font-family: 'Oswald', sans-serif;
-      font-size: .78rem;
-      letter-spacing: .2em;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: color 0.3s;
+      letter-spacing: 0.5px;
       text-transform: uppercase;
-      color: var(--text-dim);
-      text-decoration: none;
-      transition: color .3s;
-      position: relative;
     }
-
-    .nav-links a::after {
-      content: '';
-      position: absolute;
-      bottom: -4px;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: var(--purple-l);
-      transform: scaleX(0);
-      transform-origin: left;
-      transition: transform .3s;
+    .nav-links a:hover { color: var(--text); }
+    .nav-cta {
+      padding: 10px 24px !important;
+      font-size: 13px !important;
     }
-
-    .nav-links a:hover {
+    .mobile-toggle {
+      display: none;
+      background: none;
+      border: none;
       color: var(--text);
+      cursor: pointer;
+      padding: 8px;
     }
-
-    .nav-links a:hover::after {
-      transform: scaleX(1);
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 300px;
+      background: var(--bg-card);
+      border-left: 1px solid var(--border);
+      padding: 80px 32px 32px;
+      z-index: 999;
+      flex-direction: column;
+      gap: 24px;
     }
-
-    .nav-ig {
-      display: flex;
-      align-items: center;
-      gap: .6rem;
-      font-family: 'Oswald', sans-serif;
-      font-size: .75rem;
-      letter-spacing: .15em;
-      color: var(--purple-l);
+    .mobile-menu.open { display: flex; }
+    .mobile-menu a {
+      color: var(--text);
       text-decoration: none;
-      border: 1px solid var(--border);
-      padding: .5rem 1.2rem;
-      transition: all .3s;
+      font-size: 18px;
+      font-weight: 500;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
     }
-
-    .nav-ig:hover {
-      background: rgba(123, 47, 191, .15);
-      border-color: var(--purple-l);
+    .mobile-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 998;
     }
+    .mobile-overlay.open { display: block; }
 
-    /* HERO */
-    #hero {
+    /* ── Hero ───────────────────────────────────── */
+    .hero {
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      flex-direction: column;
       text-align: center;
-      padding: 10rem 5vw 6rem;
       position: relative;
       overflow: hidden;
-      background: var(--bg);
+      padding: 120px 24px 80px;
     }
-
-    .hero-glow {
+    .hero::before {
+      content: '';
       position: absolute;
-      inset: 0;
-      pointer-events: none;
-      background:
-        radial-gradient(ellipse 70% 60% at 50% 30%, rgba(188, 19, 254, 0.12) 0%, transparent 70%),
-        radial-gradient(ellipse 50% 40% at 10% 90%, rgba(57, 255, 20, 0.06) 0%, transparent 60%);
-      z-index: 1;
-    }
-
-    .hero-bg-overlay {
-      position: absolute;
-      inset: 0;
-      background: url('luxury_smoke_shop_hero_bg.png') center/cover no-repeat;
-      opacity: 0.15;
-      mix-blend-mode: screen;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    /* ORBS */
-    .orb {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(80px);
-      z-index: 1;
-      opacity: 0.4;
-      pointer-events: none;
-    }
-
-    .orb-1 {
-      width: 400px;
-      height: 400px;
-      background: var(--purple-d);
-      top: -100px;
-      left: -100px;
-      animation: float 20s infinite alternate;
-    }
-
-    .orb-2 {
-      width: 300px;
-      height: 300px;
-      background: var(--green-d);
-      bottom: 20%;
-      right: -50px;
-      animation: float 15s infinite alternate-reverse;
-    }
-
-    @keyframes float {
-      from { transform: translate(0, 0) scale(1); }
-      to { transform: translate(50px, 30px) scale(1.1); }
-    }
-
-    .hero-grid {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      background-image: linear-gradient(rgba(188, 19, 254, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(188, 19, 254, 0.03) 1px, transparent 1px);
-      background-size: 80px 80px;
-      z-index: 2;
-    }
-
-    .hero-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: .6rem;
-      font-family: 'Oswald', sans-serif;
-      font-size: .7rem;
-      letter-spacing: .3em;
-      text-transform: uppercase;
-      color: var(--green-l);
-      background: rgba(76, 175, 42, .1);
-      border: 1px solid rgba(76, 175, 42, .25);
-      padding: .4rem 1.2rem;
-      margin-bottom: 2rem;
-      opacity: 0;
-    }
-
-    .blink {
-      width: 6px;
-      height: 6px;
-      background: var(--green-l);
-      border-radius: 50%;
-      animation: blink 2s ease-in-out infinite;
-    }
-
-    @keyframes blink {
-
-      0%,
-      100% {
-        opacity: 1
-      }
-
-      50% {
-        opacity: .2
-      }
-    }
-
-    .hero-title {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(5rem, 16vw, 15rem);
-      line-height: .88;
-      letter-spacing: .02em;
-      margin-bottom: 1.5rem;
-      position: relative;
-      z-index: 1;
-    }
-
-    .ht-f {
-      display: block;
-      color: var(--purple-l);
-      -webkit-text-stroke: 2px var(--purple-d);
-      text-shadow: 0 0 100px rgba(160, 80, 224, .3);
-      opacity: 0;
-      transform: translateY(60px);
-    }
-
-    .ht-d {
-      display: block;
-      color: var(--green-l);
-      -webkit-text-stroke: 2px var(--green-d);
-      text-shadow: 0 0 100px rgba(76, 175, 42, .2);
-      opacity: 0;
-      transform: translateY(60px);
-    }
-
-    .hero-tag {
-      font-family: 'Oswald', sans-serif;
-      font-size: clamp(.8rem, 1.5vw, 1rem);
-      letter-spacing: .3em;
-      text-transform: uppercase;
-      color: var(--text-dim);
-      margin-bottom: 3rem;
-      opacity: 0;
-    }
-
-    .hero-tag span {
-      color: var(--gold);
-    }
-
-    .hero-acts {
-      display: flex;
-      gap: 1rem;
-      opacity: 0;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
-    .btn-pu {
-      display: inline-block;
-      padding: 1rem 2.5rem;
-      background: linear-gradient(135deg, var(--purple-d), var(--purple-l));
-      color: #fff;
-      font-family: 'Oswald', sans-serif;
-      font-size: .85rem;
-      letter-spacing: .25em;
-      text-transform: uppercase;
-      text-decoration: none;
-      font-weight: 500;
-      box-shadow: 0 4px 30px rgba(123, 47, 191, .35);
-      transition: all .3s;
-    }
-
-    .btn-pu:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 40px rgba(160, 80, 224, .5);
-    }
-
-    .btn-gr {
-      display: inline-block;
-      padding: 1rem 2.5rem;
-      background: linear-gradient(135deg, var(--green-d), var(--green));
-      color: #fff;
-      font-family: 'Oswald', sans-serif;
-      font-size: .85rem;
-      letter-spacing: .25em;
-      text-transform: uppercase;
-      text-decoration: none;
-      font-weight: 500;
-      box-shadow: 0 4px 30px rgba(76, 175, 42, .25);
-      transition: all .3s;
-    }
-
-    .btn-gr:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 40px rgba(76, 175, 42, .4);
-    }
-
-    .btn-ol {
-      display: inline-block;
-      padding: 1rem 2.5rem;
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--text-dim);
-      font-family: 'Oswald', sans-serif;
-      font-size: .85rem;
-      letter-spacing: .25em;
-      text-transform: uppercase;
-      text-decoration: none;
-      transition: all .3s;
-    }
-
-    .btn-ol:hover {
-      border-color: var(--purple-l);
-      color: var(--text);
-      background: rgba(188, 19, 254, 0.05);
-    }
-
-    /* FLOATING CHAT */
-    .chat-bubble {
-      position: fixed;
-      bottom: 2rem;
-      right: 2rem;
-      width: 60px;
-      height: 60px;
-      background: linear-gradient(135deg, var(--purple), var(--purple-l));
-      border-radius: 50%;
-      z-index: 999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 10px 30px rgba(188, 19, 254, 0.4);
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-
-    .chat-bubble:hover {
-      transform: scale(1.1) rotate(5deg);
-      box-shadow: 0 15px 40px rgba(188, 19, 254, 0.6);
-    }
-
-    .chat-bubble svg {
-      width: 24px;
-      height: 24px;
-      fill: #fff;
-    }
-
-    .scroll-ind {
-      position: absolute;
-      bottom: 2.5rem;
+      top: -20%;
       left: 50%;
       transform: translateX(-50%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: .6rem;
-      opacity: 0;
+      width: 800px;
+      height: 800px;
+      background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+      pointer-events: none;
     }
-
-    .scroll-line {
-      width: 1px;
-      height: 50px;
-      background: linear-gradient(to bottom, var(--purple-l), transparent);
-      animation: pulse 2s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-
-      0%,
-      100% {
-        opacity: .4;
-        transform: scaleY(1);
-        transform-origin: top
-      }
-
-      50% {
-        opacity: 1;
-        transform: scaleY(.5);
-        transform-origin: top
-      }
-    }
-
-    .scroll-ind span {
-      font-size: .58rem;
-      letter-spacing: .35em;
-      text-transform: uppercase;
-      color: var(--text-dim);
-    }
-
-    /* HOURS BAR */
-    .hours-bar {
-      background: linear-gradient(135deg, rgba(90, 26, 138, .5), rgba(29, 16, 40, .8));
-      border-top: 1px solid rgba(123, 47, 191, .3);
-      border-bottom: 1px solid rgba(76, 175, 42, .2);
-      padding: 1rem 5vw;
-      display: flex;
-      align-items: center;
-      gap: 2rem;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
-    .hb-label {
-      font-family: 'Oswald', sans-serif;
-      font-size: .7rem;
-      letter-spacing: .3em;
-      text-transform: uppercase;
-      color: var(--green-l);
-      white-space: nowrap;
-    }
-
-    .hb-div {
-      width: 1px;
-      height: 20px;
-      background: rgba(255, 255, 255, .1);
-    }
-
-    .hb-times {
-      font-family: 'Oswald', sans-serif;
-      font-size: .82rem;
-      letter-spacing: .08em;
-      color: var(--text);
-      font-weight: 400;
-    }
-
-    .hb-right {
-      margin-left: auto;
-      font-family: 'Oswald', sans-serif;
-      font-size: .72rem;
-      letter-spacing: .18em;
-      color: var(--purple-l);
-    }
-
-    /* MARQUEE */
-    .mqw {
-      overflow: hidden;
-      padding: .9rem 0;
-      background: rgba(76, 175, 42, .05);
-      border-bottom: 1px solid rgba(76, 175, 42, .15);
-    }
-
-    .mq-track {
-      display: flex;
-      animation: mq 18s linear infinite;
-      white-space: nowrap;
-    }
-
-    .mq-item {
-      font-family: 'Oswald', sans-serif;
-      font-size: .68rem;
-      letter-spacing: .3em;
-      text-transform: uppercase;
-      color: rgba(111, 212, 62, .5);
-      padding: 0 2rem;
-      flex-shrink: 0;
-    }
-
-    .mq-gem {
-      color: var(--green-l);
-    }
-
-    @keyframes mq {
-      from {
-        transform: translateX(0)
-      }
-
-      to {
-        transform: translateX(-50%)
-      }
-    }
-
-    /* SHARED */
-    section {
-      padding: 8vh 5vw;
-    }
-
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: .75rem;
-      font-family: 'Oswald', sans-serif;
-      font-size: .68rem;
-      letter-spacing: .35em;
-      text-transform: uppercase;
-      color: var(--green-l);
-      margin-bottom: 1rem;
-    }
-
-    .ey-dot {
-      width: 8px;
-      height: 8px;
-      background: var(--green-l);
-      border-radius: 50%;
-    }
-
-    /* MENU SECTION */
-    #featured {
-      background: var(--bg2);
-    }
-
-    .menu-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      margin-bottom: 3rem;
-      gap: 2rem;
-      flex-wrap: wrap;
-    }
-
-    .menu-h {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(2.5rem, 7vw, 5.5rem);
-      line-height: .88;
-      letter-spacing: .03em;
-    }
-
-    .menu-h .hp {
-      color: var(--purple-l);
-    }
-
-    .menu-h .hg {
-      color: var(--green-l);
-    }
-
-    .filter-row {
-      display: flex;
-      gap: .5rem;
-      flex-wrap: wrap;
-    }
-
-    .fbtn {
-      font-family: 'Oswald', sans-serif;
-      font-size: .68rem;
-      letter-spacing: .2em;
-      text-transform: uppercase;
-      padding: .45rem 1.2rem;
-      background: transparent;
-      cursor: pointer;
-      border: 1px solid rgba(240, 235, 248, .1);
-      color: var(--text-dim);
-      transition: all .3s;
-    }
-
-    .fbtn.active {
-      border-color: var(--purple-l);
-      color: var(--purple-l);
-      background: rgba(123, 47, 191, .1);
-    }
-
-    .fbtn:hover {
-      border-color: var(--purple-l);
-      color: var(--text);
-    }
-
-    /* Budget card */
-    .budget-card {
-      background: linear-gradient(135deg, rgba(123, 47, 191, .12) 0%, rgba(76, 175, 42, .04) 100%);
-      border: 1px solid var(--border);
-      border-left: 3px solid var(--purple-l);
-      padding: 2.5rem;
-      margin-bottom: 1.5px;
-      display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 2.5rem;
-      align-items: start;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .budget-card::before {
-      content: 'BUDGET PICK';
-      position: absolute;
-      top: 1.2rem;
-      right: 1.5rem;
-      font-family: 'Oswald', sans-serif;
-      font-size: .6rem;
-      letter-spacing: .3em;
-      color: var(--gold);
-      border: 1px solid rgba(212, 165, 32, .3);
-      padding: .25rem .8rem;
-      background: rgba(212, 165, 32, .08);
-    }
-
-    .bud-img {
-      width: 140px;
-      height: 140px;
-      border-radius: 12px;
-      background: url('premium_vape_lifestyle.png') center/cover no-repeat;
-      border: 1px solid var(--border);
-      box-shadow: 0 0 20px rgba(188, 19, 254, 0.2);
-      flex-shrink: 0;
-    }
-
-    .bud-name {
-      font-family: 'Oswald', sans-serif;
-      font-size: 1.8rem;
-      font-weight: 600;
-      color: var(--purple-l);
-      margin-bottom: .25rem;
-    }
-
-    .bud-type {
-      font-size: .7rem;
-      letter-spacing: .2em;
-      text-transform: uppercase;
-      color: var(--text-dim);
-      margin-bottom: 1rem;
-    }
-
-    .bud-price {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 2.5rem;
-      color: var(--gold);
-      letter-spacing: .05em;
-      margin-bottom: 1rem;
-    }
-
-    .bud-details {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1.2rem;
-    }
-
-    .d-label {
-      font-size: .6rem;
-      letter-spacing: .2em;
-      text-transform: uppercase;
-      color: var(--text-dim);
-      margin-bottom: .4rem;
-      font-weight: 500;
-    }
-
-    .d-list {
-      list-style: none;
-      font-size: .8rem;
-      line-height: 1.9;
-    }
-
-    .d-list li::before {
-      content: '• ';
-      color: var(--green-l);
-    }
-
-    .d-neg li::before {
-      color: var(--purple-l);
-      content: '✕ ';
-    }
-
-    /* Sig section header */
-    .sig-bar {
-      background: linear-gradient(135deg, rgba(76, 175, 42, .1), rgba(76, 175, 42, .02));
-      border: 1px solid rgba(76, 175, 42, .2);
-      border-left: 3px solid var(--green-l);
-      padding: .9rem 1.8rem;
-      margin-bottom: 1.5px;
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-
-    .sig-bar-title {
-      font-family: 'Oswald', sans-serif;
-      font-size: 1rem;
-      letter-spacing: .2em;
-      text-transform: uppercase;
-      color: var(--green-l);
-      font-weight: 600;
-    }
-
-    .sig-bar-sub {
-      font-size: .7rem;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      color: var(--text-dim);
-    }
-
-    /* Products grid */
-    .pgrid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1.5px;
-      background: rgba(123, 47, 191, .05);
-    }
-
-    .pcard {
-      background: var(--bg);
-      padding: 2rem 1.8rem;
-      position: relative;
-      overflow: hidden;
-      transition: background .35s;
-      cursor: pointer;
-    }
-
-    .pcard::after {
+    .hero::after {
       content: '';
       position: absolute;
       bottom: 0;
       left: 0;
       right: 0;
-      height: 2px;
-      background: linear-gradient(to right, var(--purple), var(--green));
-      transform: scaleX(0);
-      transform-origin: left;
-      transition: transform .4s;
+      height: 200px;
+      background: linear-gradient(to top, var(--bg-dark), transparent);
+      pointer-events: none;
     }
-
-    .pcard:hover {
-      background: var(--bg2);
-    }
-
-    .pcard:hover::after {
-      transform: scaleX(1);
-    }
-
-    .ptier {
-      display: inline-block;
-      font-family: 'Oswald', sans-serif;
-      font-size: .6rem;
-      letter-spacing: .25em;
-      text-transform: uppercase;
-      margin-bottom: 1.2rem;
-      padding: .2rem .7rem;
-    }
-
-    .ts {
-      color: var(--green-l);
-      border: 1px solid rgba(76, 175, 42, .3);
-    }
-
-    .tp {
-      color: var(--gold);
-      border: 1px solid rgba(212, 165, 32, .3);
-    }
-
-    .tt {
-      color: var(--purple-l);
-      border: 1px solid rgba(160, 80, 224, .3);
-    }
-
-    .pname {
-      font-family: 'Oswald', sans-serif;
-      font-size: 1.3rem;
-      font-weight: 600;
-      margin-bottom: .2rem;
-      line-height: 1.2;
-    }
-
-    .psub {
-      font-size: .68rem;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      color: var(--text-dim);
-      margin-bottom: 1.2rem;
-    }
-
-    .pprice {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 2.2rem;
-      color: var(--gold);
-      letter-spacing: .04em;
-    }
-
-    .punit {
-      font-size: .62rem;
-      letter-spacing: .15em;
-      text-transform: uppercase;
-      color: var(--text-dim);
-      margin-top: .1rem;
-    }
-
-    .peffects {
-      margin-top: 1rem;
-      padding-top: 1rem;
-      border-top: 1px solid rgba(240, 235, 248, .05);
-      display: flex;
-      flex-wrap: wrap;
-      gap: .4rem;
-    }
-
-    .etag {
-      font-size: .58rem;
-      letter-spacing: .1em;
-      text-transform: uppercase;
-      padding: .2rem .6rem;
-      background: rgba(76, 175, 42, .1);
-      color: var(--green-l);
-      border: 1px solid rgba(76, 175, 42, .2);
-    }
-
-    .eneg {
-      background: rgba(123, 47, 191, .1);
-      color: var(--purple-l);
-      border-color: rgba(123, 47, 191, .2);
-    }
-
-    /* EXPERIENCE */
-    #experience {
-      background: var(--bg);
-      text-align: center;
-      padding: 10vh 5vw;
-    }
-
-    .exph {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(3rem, 8vw, 7rem);
-      line-height: .9;
-      letter-spacing: .03em;
-      margin-bottom: 1rem;
-    }
-
-    .expsub {
-      font-size: .88rem;
-      color: var(--text-dim);
-      max-width: 480px;
-      margin: 0 auto 4rem;
-      line-height: 1.8;
-    }
-
-    .expgrid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1px;
-      background: rgba(123, 47, 191, .1);
-    }
-
-    .expc {
-      background: var(--bg2);
-      padding: 2.5rem 2rem;
-      text-align: left;
-      transition: background .3s;
-    }
-
-    .expc:hover {
-      background: var(--bg3);
-    }
-
-    .expicon {
-      width: 48px;
-      height: 48px;
-      background: linear-gradient(135deg, rgba(123, 47, 191, .2), rgba(76, 175, 42, .1));
-      border: 1px solid var(--border);
-      display: flex;
+    .hero-badge {
+      display: inline-flex;
       align-items: center;
-      justify-content: center;
-      margin-bottom: 1.8rem;
-      color: var(--purple-l);
-    }
-
-    .exptitle {
-      font-family: 'Oswald', sans-serif;
-      font-size: 1.1rem;
-      font-weight: 500;
-      margin-bottom: .6rem;
-    }
-
-    .expdesc {
-      font-size: .8rem;
-      line-height: 1.9;
-      color: var(--text-dim);
-    }
-
-    /* VISIT */
-    #visit {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      padding: 0;
-      gap: 0;
-      min-height: 560px;
-    }
-
-    .vl {
-      background: var(--bg2);
-      padding: 7vw;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
-    .vh {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(3rem, 5vw, 5rem);
-      line-height: .9;
-      margin-bottom: 2.5rem;
-    }
-
-    .vh .hg {
-      color: var(--green-l);
-    }
-
-    .vib {
-      margin-bottom: 1.8rem;
-    }
-
-    .vib-l {
-      font-family: 'Oswald', sans-serif;
-      font-size: .6rem;
-      letter-spacing: .3em;
+      gap: 8px;
+      padding: 8px 20px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 50px;
+      font-size: 12px;
+      font-weight: 600;
       text-transform: uppercase;
-      color: var(--purple-l);
-      margin-bottom: .35rem;
+      letter-spacing: 2px;
+      color: var(--gold);
+      margin-bottom: 32px;
+    }
+    .hero h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(42px, 8vw, 80px);
+      font-weight: 900;
+      line-height: 1.05;
+      margin-bottom: 24px;
+      letter-spacing: -1px;
+    }
+    .hero p {
+      font-size: 18px;
+      color: var(--text-muted);
+      max-width: 560px;
+      margin: 0 auto 40px;
+      line-height: 1.7;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .hero-stats {
+      display: flex;
+      justify-content: center;
+      gap: 48px;
+      margin-top: 72px;
+      padding-top: 40px;
+      border-top: 1px solid var(--border);
+    }
+    .hero-stat-value {
+      font-family: 'Playfair Display', serif;
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .hero-stat-label {
+      font-size: 12px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-top: 4px;
     }
 
-    .vib-v {
-      font-size: .95rem;
+    /* ── Smoke Particles ───────────────────────── */
+    .smoke-container {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .smoke-particle {
+      position: absolute;
+      bottom: -20px;
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+      animation: smoke-drift 8s ease-out infinite;
+    }
+    .smoke-particle:nth-child(1) { left: 10%; animation-delay: 0s; animation-duration: 10s; }
+    .smoke-particle:nth-child(2) { left: 30%; animation-delay: 2s; animation-duration: 12s; }
+    .smoke-particle:nth-child(3) { left: 50%; animation-delay: 4s; animation-duration: 9s; }
+    .smoke-particle:nth-child(4) { left: 70%; animation-delay: 1s; animation-duration: 11s; }
+    .smoke-particle:nth-child(5) { left: 85%; animation-delay: 3s; animation-duration: 10s; }
+
+    /* ── Section Headers ───────────────────────── */
+    .section-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: var(--primary);
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(32px, 4vw, 48px);
+      font-weight: 800;
+      margin-bottom: 16px;
+      letter-spacing: -0.5px;
+    }
+    .section-desc {
+      font-size: 16px;
+      color: var(--text-muted);
+      max-width: 560px;
       line-height: 1.7;
     }
 
-    .ig-link {
-      display: inline-flex;
-      align-items: center;
-      gap: .5rem;
-      font-family: 'Oswald', sans-serif;
-      font-size: .95rem;
-      letter-spacing: .15em;
-      color: var(--purple-l);
-      text-decoration: none;
-      margin-top: 2rem;
+    /* ── Products Grid ─────────────────────────── */
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 24px;
+      margin-top: 48px;
+    }
+    .product-card {
+      background: var(--bg-card);
       border: 1px solid var(--border);
-      padding: .7rem 1.5rem;
-      transition: all .3s;
-    }
-
-    .ig-link:hover {
-      background: rgba(123, 47, 191, .15);
-      border-color: var(--purple-l);
-    }
-
-    .vr {
-      background: var(--bg3);
-      padding: 7vw;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
+      border-radius: var(--radius);
+      padding: 32px;
       position: relative;
       overflow: hidden;
+      transition: all 0.4s ease;
     }
-
-    .vr::before {
-      content: attr(data-initials);
+    .product-card::before {
+      content: '';
       position: absolute;
-      right: -2vw;
-      top: 50%;
-      transform: translateY(-50%);
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 20vw;
-      color: transparent;
-      -webkit-text-stroke: 2px rgba(123, 47, 191, .05);
-      pointer-events: none;
-      -webkit-user-select: none;
-      user-select: none;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--primary), transparent);
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+    .product-card:hover {
+      border-color: rgba(230,57,70,0.3);
+      transform: translateY(-4px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+    .product-card:hover::before { opacity: 1; }
+    .product-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      background: rgba(230,57,70,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      font-size: 28px;
+    }
+    .product-card h3 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .product-card p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.7;
     }
 
-    .hd-title {
-      font-family: 'Oswald', sans-serif;
-      font-size: .68rem;
-      letter-spacing: .35em;
-      text-transform: uppercase;
-      color: var(--green-l);
-      margin-bottom: 1.8rem;
-      padding-bottom: 1rem;
-      border-bottom: 1px solid rgba(76, 175, 42, .15);
+    /* ── Reviews ────────────────────────────────── */
+    .reviews-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+      margin-top: 48px;
     }
+    .review-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      transition: all 0.3s ease;
+    }
+    .review-card:hover {
+      border-color: rgba(212,168,83,0.3);
+      transform: translateY(-2px);
+    }
+    .review-stars {
+      color: var(--gold);
+      font-size: 18px;
+      letter-spacing: 3px;
+      margin-bottom: 16px;
+    }
+    .review-text {
+      font-size: 15px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      font-style: italic;
+      margin-bottom: 20px;
+    }
+    .review-author {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+    .review-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--gold));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 16px;
+      color: #fff;
+    }
+    .review-name { font-weight: 600; font-size: 14px; }
+    .review-date { font-size: 12px; color: var(--text-dim); }
 
-    .hrow {
+    /* ── Rating Banner ──────────────────────────── */
+    .rating-banner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      padding: 32px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      margin-top: 48px;
+    }
+    .rating-number {
+      font-family: 'Playfair Display', serif;
+      font-size: 56px;
+      font-weight: 900;
+    }
+    .rating-stars { color: var(--gold); font-size: 24px; letter-spacing: 4px; }
+    .rating-source { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+
+    /* ── Hours & Location ──────────────────────── */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 48px;
+    }
+    .info-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 40px;
+    }
+    .info-card h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      margin-bottom: 24px;
+    }
+    .hours-row {
       display: flex;
       justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+    .hours-day { color: var(--text-muted); }
+    .hours-time { font-weight: 600; }
+    .open-badge {
+      display: inline-flex;
       align-items: center;
-      padding: .8rem 0;
-      border-bottom: 1px solid rgba(240, 235, 248, .04);
-      font-size: .88rem;
+      gap: 6px;
+      margin-top: 16px;
+      padding: 6px 14px;
+      background: rgba(34,197,94,0.1);
+      border: 1px solid rgba(34,197,94,0.2);
+      border-radius: 50px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #22c55e;
+    }
+    .open-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #22c55e;
+      animation: pulse-glow 2s infinite;
+      box-shadow: 0 0 8px rgba(34,197,94,0.5);
     }
 
-    .hday {
-      color: var(--text-dim);
-    }
-
-    .htime {
-      color: var(--text);
-      font-weight: 400;
-    }
-
-    .hrow.today .hday,
-    .hrow.today .htime {
-      color: var(--green-l);
-      font-weight: 500;
-    }
-
-    .tbadge {
-      font-size: .52rem;
-      letter-spacing: .18em;
-      text-transform: uppercase;
-      background: rgba(76, 175, 42, .15);
-      color: var(--green-l);
-      border: 1px solid rgba(76, 175, 42, .3);
-      padding: .12rem .45rem;
-      margin-left: .5rem;
-    }
-
-    .menu-top-desc {
-      font-size: .8rem;
-      color: var(--text-dim);
-      margin-top: .5rem;
-      font-style: italic;
-    }
-
-    .sig-bar.sig-bar-wrap {
-      margin-top: 3px;
-    }
-
-    .menu-bottom-btn {
-      text-align: center;
-      margin-top: 3rem;
-    }
-
-    .eyebrow.exp-eyebrow {
-      justify-content: center;
-      margin-bottom: 1rem;
-    }
-
-    .exph-p {
-      color: var(--purple-l);
-    }
-
-    .exph-g {
-      color: var(--green-l);
-    }
-
-    .store-hours-wrap {
+    /* ── Map ────────────────────────────────────── */
+    .map-container {
       width: 100%;
-      max-width: 360px;
-      position: relative;
-      z-index: 1;
+      height: 300px;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      margin-top: 24px;
+    }
+    .map-container iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      filter: grayscale(1) invert(1) brightness(0.6) contrast(1.2);
     }
 
-    /* FOOTER */
+    /* ── Contact / CTA ─────────────────────────── */
+    .cta-section {
+      text-align: center;
+      position: relative;
+    }
+    .cta-section::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .cta-box {
+      position: relative;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 64px 48px;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    .contact-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin: 40px 0;
+    }
+    .contact-item {
+      padding: 24px 16px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      text-align: center;
+    }
+    .contact-item-icon {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+    .contact-item-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+    }
+    .contact-item-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .contact-item a {
+      color: var(--text);
+      text-decoration: none;
+    }
+    .contact-item a:hover { color: var(--primary); }
+
+    /* ── Claim Banner ──────────────────────────── */
+    .claim-banner {
+      background: linear-gradient(135deg, var(--bg-card) 0%, rgba(230,57,70,0.05) 100%);
+      border: 1px solid rgba(230,57,70,0.2);
+      border-radius: 20px;
+      padding: 48px;
+      text-align: center;
+      margin-top: 80px;
+    }
+    .claim-banner h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      margin-bottom: 12px;
+    }
+    .claim-banner p {
+      color: var(--text-muted);
+      font-size: 15px;
+      margin-bottom: 28px;
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.7;
+    }
+
+    /* ── Footer ─────────────────────────────────── */
     footer {
       border-top: 1px solid var(--border);
-      padding: 3.5rem 5vw;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 2rem;
+      padding: 64px 0 40px;
+      background: var(--bg-dark);
     }
-
-    .fbrand-name {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 2.2rem;
-      line-height: 1;
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 48px;
     }
-
-    .fbrand-name .fp {
-      color: var(--purple-l);
+    .footer-brand {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 12px;
     }
-
-    .fbrand-name .fg {
-      color: var(--green-l);
+    .footer-desc {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      max-width: 320px;
     }
-
-    .fbrand-sub {
-      font-size: .58rem;
-      letter-spacing: .3em;
+    .footer-heading {
+      font-size: 12px;
+      font-weight: 700;
       text-transform: uppercase;
+      letter-spacing: 2px;
       color: var(--text-dim);
-      margin-top: .25rem;
+      margin-bottom: 20px;
     }
-
-    .fdisc {
-      font-size: .6rem;
-      letter-spacing: .04em;
-      color: rgba(240, 235, 248, .18);
-      max-width: 380px;
-      line-height: 1.8;
-      text-align: center;
-    }
-
-    .fright {
+    .footer-links {
+      list-style: none;
       display: flex;
       flex-direction: column;
-      align-items: flex-end;
-      gap: .75rem;
+      gap: 12px;
     }
-
-    .fig {
-      font-family: 'Oswald', sans-serif;
-      font-size: .8rem;
-      letter-spacing: .18em;
-      color: var(--purple-l);
+    .footer-links a {
+      color: var(--text-muted);
       text-decoration: none;
-      transition: color .3s;
+      font-size: 14px;
+      transition: color 0.3s;
     }
-
-    .fig:hover {
-      color: var(--green-l);
+    .footer-links a:hover { color: var(--text); }
+    .footer-bottom {
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--text-dim);
     }
-
-    .fcopy {
-      font-size: .6rem;
-      letter-spacing: .1em;
-      color: rgba(240, 235, 248, .2);
+    .footer-bottom a {
+      color: var(--primary);
+      text-decoration: none;
     }
+    .footer-bottom a:hover { text-decoration: underline; }
 
-    /* RESPONSIVE */
-    @media(max-width:900px) {
-      .pgrid {
-        grid-template-columns: 1fr 1fr;
-      }
-
-      .expgrid {
-        grid-template-columns: 1fr 1fr;
-      }
-
-      #visit {
-        grid-template-columns: 1fr;
-      }
-
-      .budget-card {
-        grid-template-columns: 1fr;
-      }
-
-      .bud-details {
-        grid-template-columns: 1fr 1fr;
-      }
-    }
-
-    @media(max-width:600px) {
-      .nav-links {
-        display: none;
-      }
-
-      .pgrid {
-        grid-template-columns: 1fr;
-      }
-
-      .expgrid {
-        grid-template-columns: 1fr;
-      }
-
-      .bud-details {
-        grid-template-columns: 1fr;
-      }
-
-      footer {
-        flex-direction: column;
-      }
-
-      .fright {
-        align-items: flex-start;
-      }
-
-      .fdisc {
-        text-align: left;
-      }
+    /* ── Responsive ─────────────────────────────── */
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .mobile-toggle { display: block; }
+      .hero h1 { font-size: 36px; }
+      .hero-stats { flex-direction: column; gap: 24px; }
+      .info-grid { grid-template-columns: 1fr; }
+      .contact-grid { grid-template-columns: 1fr; }
+      .footer-grid { grid-template-columns: 1fr; gap: 32px; }
+      .hero-actions { flex-direction: column; align-items: center; }
+      .section { padding: 64px 0; }
+      .rating-banner { flex-direction: column; gap: 12px; }
+      .age-gate-box { padding: 32px 24px; }
     }
   </style>
 </head>
-
 <body>
 
-  <!-- AGE GATE -->
-  <div id="age-gate">
-    <div class="ag-name">
-      <div class="ag-line1">{{BUSINESS_LINE1}}</div>
-      <div class="ag-line2">{{BUSINESS_LINE2}}</div>
+  <!-- ═══ AGE VERIFICATION ═══ -->
+  <div id="age-gate" class="age-gate">
+    <div class="age-gate-box animate-up">
+      <div style="font-size: 48px; margin-bottom: 16px;">🔞</div>
+      <h2>Age Verification</h2>
+      <p>You must be 21 years or older to view this website. By entering, you confirm you meet the legal age requirement.</p>
+      <div class="age-gate-buttons">
+        <button class="btn btn-primary" onclick="document.getElementById('age-gate').style.display='none'">I'm 21+</button>
+        <button class="btn btn-outline" onclick="window.location='https://google.com'">Leave</button>
+      </div>
     </div>
-    <div class="ag-sub">Premium Smoke Shop · {{CITY}}</div>
-    <div class="ag-divider"></div>
-    <div class="ag-q">Are you 18 or older?</div>
-    <div class="ag-note">You must be of legal age to enter this site</div>
-    <div class="ag-btns">
-      <button class="ag-btn ag-yes" onclick="enterSite()">Yes, Enter</button>
-      <button class="ag-btn ag-no" onclick="window.location.href='https://www.google.com'">No, Exit</button>
-    </div>
-    <p class="ag-disc">By entering you agree to our Terms of Service. Products are for use by adults 18+ only.
-      Please consume responsibly.</p>
   </div>
 
-  <!-- NAV -->
-  <nav id="nav">
-    <a class="nav-brand" href="#">
-      <span class="nf">{{BUSINESS_LINE1}}</span>
-      <span class="nd">{{BUSINESS_LINE2}}</span>
-    </a>
-    <ul class="nav-links">
-      <li><a href="#featured">Products</a></li>
-      <li><a href="#experience">About</a></li>
-      <li><a href="#visit">Visit</a></li>
-      <li><a href="#pricing" style="color:var(--green);">Get Started</a></li>
-    </ul>
-    <a class="nav-ig" href="https://instagram.com/{{INSTAGRAM}}" target="_blank" rel="noopener noreferrer">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="2" y="2" width="20" height="20" rx="5" />
-        <circle cx="12" cy="12" r="5" />
-        <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
-      </svg>
-      @{{INSTAGRAM}}
-    </a>
+  <!-- ═══ NAVIGATION ═══ -->
+  <nav id="navbar">
+    <div class="nav-inner">
+      <a href="#" class="nav-brand">{{BUSINESS_NAME}}</a>
+      <ul class="nav-links">
+        <li><a href="#products">Products</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#reviews">Reviews</a></li>
+        <li><a href="#contact">Contact</a></li>
+        <li><a href="tel:{{PHONE_CLEAN}}" class="btn btn-primary nav-cta">📞 Call Now</a></li>
+      </ul>
+      <button class="mobile-toggle" onclick="toggleMobile()" aria-label="Menu">
+        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+    </div>
   </nav>
 
-  <!-- THEME ELEMENTS -->
-  <div class="orb orb-1"></div>
-  <div class="orb orb-2"></div>
-
-  <!-- HERO -->
-  <section id="hero">
-    <div class="hero-bg-overlay"></div>
-    <div class="hero-glow"></div>
-    <div class="hero-grid"></div>
-    <div class="hero-badge">
-      <div class="blink"></div>Live Inventory · Open Today
-    </div>
-    <h1 class="hero-title">
-      <span class="ht-f">{{BUSINESS_LINE1}}</span>
-      <span class="ht-d">{{BUSINESS_LINE2}}</span>
-    </h1>
-    <p class="hero-tag">Premium Smoke Shop &nbsp;·&nbsp; <span>{{CITY}}</span></p>
-    <div class="hero-acts">
-      <a href="#featured" class="btn-pu">View Products</a>
-      <a href="#visit" class="btn-gr">Find Us</a>
-      <a href="https://instagram.com/{{INSTAGRAM}}" class="btn-ol" target="_blank"
-        rel="noopener noreferrer">@{{INSTAGRAM}}</a>
-    </div>
-    <div class="scroll-ind">
-      <div class="scroll-line"></div>
-      <span>Scroll</span>
-    </div>
-  </section>
-
-  <!-- HOURS BAR -->
-  <div class="hours-bar">
-    <div class="hb-label">Store Hours</div>
-    <div class="hb-div"></div>
-    <div class="hb-times">Mon – Sat &nbsp; 10:00 AM – 9:00 PM &nbsp;&nbsp;|&nbsp;&nbsp; Sunday &nbsp; 11:00 AM – 7:00 PM
-    </div>
-    <div class="hb-right">📍 {{CITY}}</div>
+  <!-- Mobile Menu -->
+  <div class="mobile-overlay" id="mobile-overlay" onclick="toggleMobile()"></div>
+  <div class="mobile-menu" id="mobile-menu">
+    <a href="#products" onclick="toggleMobile()">Products</a>
+    <a href="#about" onclick="toggleMobile()">About</a>
+    <a href="#reviews" onclick="toggleMobile()">Reviews</a>
+    <a href="#contact" onclick="toggleMobile()">Contact</a>
+    <a href="tel:{{PHONE_CLEAN}}" class="btn btn-primary" style="text-align:center;margin-top:16px;">📞 Call Now</a>
   </div>
 
-  <!-- MARQUEE -->
-  <div class="mqw">
-    <div class="mq-track">
-      <span class="mq-item">Vapes</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Glass</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Wraps</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Delta 8</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">CBD</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Hookah</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Accessories</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Kratom</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Vapes</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Glass</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Wraps</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Delta 8</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">CBD</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Hookah</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Accessories</span><span class="mq-item mq-gem">✦</span>
-      <span class="mq-item">Kratom</span><span class="mq-item mq-gem">✦</span>
+  <!-- ═══ HERO ═══ -->
+  <section class="hero">
+    <div class="smoke-container">
+      <div class="smoke-particle"></div>
+      <div class="smoke-particle"></div>
+      <div class="smoke-particle"></div>
+      <div class="smoke-particle"></div>
+      <div class="smoke-particle"></div>
     </div>
-  </div>
-
-  <!-- MENU / PRODUCTS -->
-  <section id="featured">
-    <div class="menu-top">
-      <div>
-        <div class="eyebrow">
-          <div class="ey-dot"></div>Top Sellers
-        </div>
-        <div class="menu-h">
-          <div class="hp">Product</div>
-          <div class="hg">Menu</div>
-        </div>
-        <div class="menu-top-desc">Premium smoke shop products. Best brands, best prices.</div>
+    <div class="container" style="position:relative;z-index:2;">
+      <div class="hero-badge animate-up">📍 {{CITY}}, {{STATE}}</div>
+      <h1 class="animate-up delay-1">
+        {{CITY}}'s Premier<br>
+        <span class="text-gradient">Smoke Shop</span>
+      </h1>
+      <p class="animate-up delay-2">
+        {{BUSINESS_NAME}} — your destination for premium glass, vaporizers, CBD, kratom, and smoking accessories. Expert staff, top brands, unbeatable prices.
+      </p>
+      <div class="hero-actions animate-up delay-3">
+        <a href="#contact" class="btn btn-primary">Visit Us Today</a>
+        <a href="tel:{{PHONE_CLEAN}}" class="btn btn-glass">📞 {{PHONE}}</a>
       </div>
-      <div class="filter-row">
-        <button class="fbtn active">All</button>
-        <button class="fbtn">Vapes</button>
-        <button class="fbtn">Glass</button>
-        <button class="fbtn">CBD</button>
+      <div class="hero-stats animate-up delay-4">
+        <div>
+          <div class="hero-stat-value">{{RATING}}</div>
+          <div class="hero-stat-label">Google Rating</div>
+        </div>
+        <div>
+          <div class="hero-stat-value">{{REVIEW_COUNT}}</div>
+          <div class="hero-stat-label">Reviews</div>
+        </div>
+        <div>
+          <div class="hero-stat-value">500+</div>
+          <div class="hero-stat-label">Products</div>
+        </div>
       </div>
     </div>
+  </section>
 
-    <!-- Featured Product -->
-    <div class="budget-card">
-      <div class="bud-img">💨</div>
-      <div>
-        <div class="bud-name">Elf Bar BC5000</div>
-        <div class="bud-type">Disposable Vape · Best Seller</div>
-        <div class="bud-price">$14.99</div>
-        <div class="bud-details">
-          <div>
-            <div class="d-label">Flavors</div>
-            <ul class="d-list">
-              <li>Blue Razz Ice</li>
-              <li>Watermelon</li>
-              <li>Peach Mango</li>
-            </ul>
+  <!-- ═══ PRODUCTS ═══ -->
+  <section id="products" class="section" style="background: var(--bg-card);">
+    <div class="container">
+      <div class="section-label animate-up">What We Carry</div>
+      <div class="section-title animate-up delay-1">Premium Selection</div>
+      <div class="section-desc animate-up delay-2">Hand-picked products from the best brands. Our staff knows every piece we carry.</div>
+
+      <div class="products-grid">
+        <div class="product-card animate-up delay-1">
+          <div class="product-icon">🔮</div>
+          <h3>Premium Glass</h3>
+          <p>Hand-blown pipes, water pipes, rigs, and bubblers from top artists and brands. Every piece inspected for quality.</p>
+        </div>
+        <div class="product-card animate-up delay-2">
+          <div class="product-icon">💨</div>
+          <h3>Vaporizers</h3>
+          <p>The latest dry herb and concentrate vaporizers. Portable, desktop, and pen-style from Pax, Storz & Bickel, and more.</p>
+        </div>
+        <div class="product-card animate-up delay-3">
+          <div class="product-icon">🌿</div>
+          <h3>CBD & Delta</h3>
+          <p>Lab-tested CBD flower, gummies, tinctures, and delta products. Third-party verified for purity and potency.</p>
+        </div>
+        <div class="product-card animate-up delay-4">
+          <div class="product-icon">🍃</div>
+          <h3>Kratom</h3>
+          <p>Premium kratom powders, capsules, and extracts. Multiple strains available — our staff can guide your selection.</p>
+        </div>
+        <div class="product-card animate-up delay-5">
+          <div class="product-icon">🪝</div>
+          <h3>Hookah & Shisha</h3>
+          <p>Traditional and modern hookahs, premium shisha tobacco, coals, hoses, and accessories. Perfect for entertaining.</p>
+        </div>
+        <div class="product-card animate-up delay-5">
+          <div class="product-icon">⚡</div>
+          <h3>Accessories</h3>
+          <p>Grinders, papers, rolling trays, torches, cleaning kits, stash jars, and everything else to complete your setup.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ ABOUT & HOURS ═══ -->
+  <section id="about" class="section">
+    <div class="container">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start;">
+        <div>
+          <div class="section-label animate-up">Our Story</div>
+          <div class="section-title animate-up delay-1">{{CITY}}'s Friendliest<br>Smoke Shop</div>
+          <p style="color:var(--text-muted);line-height:1.8;margin:24px 0;" class="animate-up delay-2">
+            {{BUSINESS_NAME}} has been serving the {{CITY}} community with passion and expertise. We believe shopping for smoking accessories should be welcoming, not awkward — a place where you can ask questions and get honest answers.
+          </p>
+          <p style="color:var(--text-muted);line-height:1.8;margin-bottom:32px;" class="animate-up delay-3">
+            Our hand-picked inventory covers everything from artisan glass to the latest vaporizer technology. We work directly with manufacturers and local artists to bring you the best selection at fair prices.
+          </p>
+          <div style="display:flex;flex-direction:column;gap:12px;" class="animate-up delay-4">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span style="color:var(--primary);font-size:18px;">✓</span>
+              <span style="color:var(--text-muted);font-size:14px;">Locally owned and operated</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span style="color:var(--primary);font-size:18px;">✓</span>
+              <span style="color:var(--text-muted);font-size:14px;">Staff trained on every product we carry</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span style="color:var(--primary);font-size:18px;">✓</span>
+              <span style="color:var(--text-muted);font-size:14px;">Competitive pricing guaranteed</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span style="color:var(--primary);font-size:18px;">✓</span>
+              <span style="color:var(--text-muted);font-size:14px;">New products added weekly</span>
+            </div>
           </div>
-          <div>
-            <div class="d-label">Specs</div>
-            <ul class="d-list">
-              <li>5000 puffs</li>
-              <li>5% nicotine</li>
-              <li>Rechargeable</li>
-            </ul>
+        </div>
+
+        <div class="info-grid" style="grid-template-columns:1fr;margin-top:0;">
+          <div class="info-card animate-up delay-2">
+            <h3>⏰ Store Hours</h3>
+            <div class="hours-row"><span class="hours-day">Monday – Saturday</span><span class="hours-time">{{HOURS}}</span></div>
+            <div class="hours-row"><span class="hours-day">Sunday</span><span class="hours-time">{{HOURS}}</span></div>
+            <div class="open-badge"><span class="open-dot"></span> Open Now</div>
           </div>
-          <div>
-            <div class="d-label">Features</div>
-            <ul class="d-list">
-              <li>Pre-filled</li>
-              <li>Draw-activated</li>
-              <li>USB-C charge</li>
-            </ul>
+          <div class="info-card animate-up delay-3">
+            <h3>📍 Find Us</h3>
+            <p style="color:var(--text);font-weight:600;margin-bottom:4px;">{{ADDRESS}}</p>
+            <p style="color:var(--text-muted);font-size:14px;margin-bottom:20px;">{{CITY}}, {{STATE}}</p>
+            <a href="https://maps.google.com/?q={{ADDRESS_ENCODED}}" target="_blank" rel="noopener" class="btn btn-primary" style="width:100%;justify-content:center;padding:14px 24px;">
+              Get Directions
+            </a>
+            <div class="map-container">
+              <iframe src="https://maps.google.com/maps?q={{ADDRESS_ENCODED}}&t=&z=15&ie=UTF8&iwloc=&output=embed" allowfullscreen loading="lazy"></iframe>
+            </div>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- Signature Bar -->
-    <div class="sig-bar sig-bar-wrap">
-      <span class="sig-bar-title">Popular Products</span>
-      <span class="sig-bar-sub">— Always in stock</span>
-    </div>
-
-    <div class="pgrid">
-      <div class="pcard">
-        <div class="ptier ts">Vapes</div>
-        <div class="pname">Geek Bar Pulse</div>
-        <div class="psub">Disposable · 15000 Puffs</div>
-        <div class="pprice">$19.99</div>
-        <div class="punit">per unit</div>
-        <div class="peffects">
-          <span class="etag">15000 Puffs</span>
-          <span class="etag">Rechargeable</span>
-          <span class="etag">20+ Flavors</span>
-          <span class="etag eneg">5% Nic</span>
-        </div>
-      </div>
-
-      <div class="pcard">
-        <div class="ptier tp">Glass</div>
-        <div class="pname">8" Beaker Bong</div>
-        <div class="psub">Borosilicate Glass · Ice Catcher</div>
-        <div class="pprice">$24.99</div>
-        <div class="punit">per piece</div>
-        <div class="peffects">
-          <span class="etag">Ice Catcher</span>
-          <span class="etag">Thick Glass</span>
-          <span class="etag">Easy Clean</span>
-        </div>
-      </div>
-
-      <div class="pcard">
-        <div class="ptier tt">Delta 8</div>
-        <div class="pname">Delta 8 Gummies</div>
-        <div class="psub">25mg · 30 Count</div>
-        <div class="pprice">$29.99</div>
-        <div class="punit">per pack</div>
-        <div class="peffects">
-          <span class="etag">25mg Each</span>
-          <span class="etag">Lab Tested</span>
-          <span class="etag">Mixed Flavors</span>
-          <span class="etag eneg">21+ Only</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="menu-bottom-btn">
-      <a href="https://instagram.com/{{INSTAGRAM}}" class="btn-pu" target="_blank" rel="noopener noreferrer">Full Menu on
-        Instagram</a>
-    </div>
   </section>
 
-  <!-- EXPERIENCE / WHY US -->
-  <section id="experience">
-    <div class="eyebrow exp-eyebrow">
-      <div class="ey-dot"></div>Why {{BUSINESS_NAME}}
-    </div>
-    <h2 class="exph"><span class="exph-p">Premium</span> <span class="exph-g">Products.</span><br>Best Prices.</h2>
-    <p class="expsub">We carry only the top brands at prices that beat the competition. Walk in, get what you need,
-      and leave happy — every time.</p>
-    <div class="expgrid">
-      <div class="expc">
-        <div class="expicon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="1.5">
-            <path d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg></div>
-        <div class="exptitle">Top Brands Only</div>
-        <div class="expdesc">Elf Bar, Geek Bar, RAW, Grav, and more. We stock what actually sells.</div>
+  <!-- ═══ REVIEWS ═══ -->
+  <section id="reviews" class="section" style="background:var(--bg-card);">
+    <div class="container">
+      <div style="text-align:center;">
+        <div class="section-label animate-up">Customer Love</div>
+        <div class="section-title animate-up delay-1">What People Are Saying</div>
+        <div class="section-desc animate-up delay-2" style="margin:0 auto;">Don't take our word for it — here's what our customers think.</div>
       </div>
-      <div class="expc">
-        <div class="expicon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="1.5">
-            <path
-              d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
-          </svg></div>
-        <div class="exptitle">Friendly Staff</div>
-        <div class="expdesc">New to vaping or a veteran smoker — our team will point you in the right direction.
+
+      <div class="reviews-grid">
+        <div class="review-card animate-up delay-1">
+          <div class="review-stars">★★★★★</div>
+          <div class="review-text">"Best smoke shop in {{CITY}}! Super knowledgeable staff and an amazing glass selection. Prices are very fair. This is my go-to spot."</div>
+          <div class="review-author">
+            <div class="review-avatar">M</div>
+            <div>
+              <div class="review-name">Marcus T.</div>
+              <div class="review-date">2 weeks ago</div>
+            </div>
+          </div>
+        </div>
+        <div class="review-card animate-up delay-2">
+          <div class="review-stars">★★★★★</div>
+          <div class="review-text">"Clean, professional, and always stocked. I drive past 3 other shops to come here. Wouldn't go anywhere else. The staff is incredible."</div>
+          <div class="review-author">
+            <div class="review-avatar">J</div>
+            <div>
+              <div class="review-name">Jasmine L.</div>
+              <div class="review-date">1 month ago</div>
+            </div>
+          </div>
+        </div>
+        <div class="review-card animate-up delay-3">
+          <div class="review-stars">★★★★★</div>
+          <div class="review-text">"Found my new favorite spot. They carry everything I need and the vibe is totally welcoming. Staff really knows their stuff. Highly recommend."</div>
+          <div class="review-author">
+            <div class="review-avatar">D</div>
+            <div>
+              <div class="review-name">Devon R.</div>
+              <div class="review-date">3 weeks ago</div>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="expc">
-        <div class="expicon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="1.5">
-            <path d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg></div>
-        <div class="exptitle">Always Restocked</div>
-        <div class="expdesc">Fresh inventory weekly. If we're out of something, we'll have it back fast.</div>
-      </div>
-      <div class="expc">
-        <div class="expicon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="1.5">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          </svg></div>
-        <div class="exptitle">Private & Discreet</div>
-        <div class="expdesc">Your visit stays your business. We respect your privacy, always.</div>
+
+      <div class="rating-banner animate-up delay-4">
+        <div class="rating-number text-gradient">{{RATING}}</div>
+        <div>
+          <div class="rating-stars">{{STARS}}</div>
+          <div class="rating-source">Based on {{REVIEW_COUNT}} Google Reviews</div>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- VISIT -->
-  <section id="visit">
-    <div class="vl">
-      <div class="eyebrow">
-        <div class="ey-dot"></div>Find Us
-      </div>
-      <div class="vh">Come <span class="hg">Visit</span><br>In Store.</div>
-      <div class="vib">
-        <div class="vib-l">Address</div>
-        <div class="vib-v">{{ADDRESS}}<br>{{CITY}}</div>
-      </div>
-      <div class="vib">
-        <div class="vib-l">Phone</div>
-        <div class="vib-v">{{PHONE}}</div>
-      </div>
-      <div class="vib">
-        <div class="vib-l">Instagram</div>
-        <div class="vib-v">@{{INSTAGRAM}}</div>
-      </div>
-      <a href="https://instagram.com/{{INSTAGRAM}}" class="ig-link" target="_blank" rel="noopener noreferrer">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <rect x="2" y="2" width="20" height="20" rx="5" />
-          <circle cx="12" cy="12" r="5" />
-          <circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" stroke="none" />
-        </svg>
-        @{{INSTAGRAM}} on Instagram
-      </a>
-    </div>
-    <div class="vr" data-initials="{{INITIALS}}">
-      <div class="store-hours-wrap">
-        <div class="hd-title">Store Hours</div>
-        <div class="hrow" id="h-mon"><span class="hday">Monday</span><span class="htime">10:00 AM – 9:00 PM</span></div>
-        <div class="hrow" id="h-tue"><span class="hday">Tuesday</span><span class="htime">10:00 AM – 9:00 PM</span>
+  <!-- ═══ CONTACT / CTA ═══ -->
+  <section id="contact" class="section cta-section">
+    <div class="container">
+      <div class="cta-box animate-up">
+        <div class="section-label">Come See Us</div>
+        <div class="section-title">Ready to Visit?</div>
+        <p style="color:var(--text-muted);font-size:16px;line-height:1.7;max-width:480px;margin:16px auto 0;">
+          Stop by {{BUSINESS_NAME}} and let our team help you find exactly what you're looking for. Open 7 days a week.
+        </p>
+
+        <div class="contact-grid">
+          <div class="contact-item">
+            <div class="contact-item-icon">📍</div>
+            <div class="contact-item-label">Address</div>
+            <div class="contact-item-value">{{ADDRESS}}<br>{{CITY}}, {{STATE}}</div>
+          </div>
+          <div class="contact-item">
+            <div class="contact-item-icon">📞</div>
+            <div class="contact-item-label">Phone</div>
+            <div class="contact-item-value"><a href="tel:{{PHONE_CLEAN}}">{{PHONE}}</a></div>
+          </div>
+          <div class="contact-item">
+            <div class="contact-item-icon">⏰</div>
+            <div class="contact-item-label">Hours</div>
+            <div class="contact-item-value">{{HOURS}}</div>
+          </div>
         </div>
-        <div class="hrow" id="h-wed"><span class="hday">Wednesday</span><span class="htime">10:00 AM – 9:00 PM</span>
+
+        <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">
+          <a href="https://maps.google.com/?q={{ADDRESS_ENCODED}}" target="_blank" rel="noopener" class="btn btn-primary">📍 Get Directions</a>
+          <a href="tel:{{PHONE_CLEAN}}" class="btn btn-outline">📞 Call Now</a>
         </div>
-        <div class="hrow" id="h-thu"><span class="hday">Thursday</span><span class="htime">10:00 AM – 9:00 PM</span>
+      </div>
+
+      <!-- Claim This Site Banner -->
+      <div class="claim-banner animate-up">
+        <div style="font-size:48px;margin-bottom:16px;">🚀</div>
+        <h3>This Website Was Built For <span class="text-gradient">{{BUSINESS_NAME}}</span></h3>
+        <p>This premium website is ready to go live for your smoke shop. Professional design, mobile-optimized, SEO-ready — all for just $200.</p>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+          <a href="tel:+12813230450" class="btn btn-gold">💰 Claim For $200</a>
+          <a href="https://smokeshopgrowth.com" target="_blank" class="btn btn-outline">Learn More</a>
         </div>
-        <div class="hrow" id="h-fri"><span class="hday">Friday</span><span class="htime">10:00 AM – 9:00 PM</span></div>
-        <div class="hrow" id="h-sat"><span class="hday">Saturday</span><span class="htime">10:00 AM – 9:00 PM</span>
-        </div>
-        <div class="hrow" id="h-sun"><span class="hday">Sunday</span><span class="htime">11:00 AM – 7:00 PM</span></div>
+        <p style="color:var(--text-dim);font-size:13px;margin-top:20px;margin-bottom:0;">
+          Questions? Call us at <a href="tel:+12813230450" style="color:var(--gold);text-decoration:none;">(281) 323-0450</a> or visit <a href="https://smokeshopgrowth.com" style="color:var(--gold);text-decoration:none;">smokeshopgrowth.com</a>
+        </p>
       </div>
     </div>
   </section>
 
-  <!-- PRICING / GET STARTED -->
-  <section id="pricing" style="padding:80px 24px;max-width:1100px;margin:0 auto;">
-    <div class="eyebrow" style="margin-bottom:12px;">
-      <div class="ey-dot"></div>Get Started
-    </div>
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(2rem,5vw,3.2rem);letter-spacing:2px;margin-bottom:12px;">
-      Ready To <span class="hg">Grow</span> Your Shop?
-    </div>
-    <p style="color:var(--text-dim);max-width:560px;line-height:1.7;margin-bottom:48px;">
-      Get a premium, fully-customized website built just for <strong>{{BUSINESS_NAME}}</strong>. Powered by
-      <a href="https://smokeshopgrowth.com" target="_blank" rel="noopener" style="color:var(--green);text-decoration:none;font-weight:500;">smokeshopgrowth.com</a>
-    </p>
-
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;">
-      <!-- Starter -->
-      <div class="pricing-card" data-tier="starter" style="background:var(--glass);border:1px solid var(--border);border-radius:16px;padding:32px;position:relative;">
-        <div style="font-family:'Oswald',sans-serif;font-size:1.1rem;text-transform:uppercase;letter-spacing:2px;color:var(--purple-l);margin-bottom:8px;">Starter</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:2.8rem;line-height:1;">$299<span style="font-size:1.2rem;color:var(--text-dim);">/mo</span></div>
-        <p style="color:var(--text-dim);font-size:.88rem;margin:12px 0 20px;">Website + basic SEO</p>
-        <ul style="list-style:none;padding:0;margin:0 0 24px;font-size:.9rem;line-height:2;color:var(--text-dim);">
-          <li>✅ Custom branded website</li>
-          <li>✅ Mobile responsive</li>
-          <li>✅ Google Maps integration</li>
-          <li>✅ Contact form</li>
-        </ul>
-        <button onclick="startCheckout('starter')" class="btn-ol" style="width:100%;cursor:pointer;">Get Started</button>
-      </div>
-
-      <!-- Growth (Popular) -->
-      <div class="pricing-card" data-tier="growth" style="background:var(--glass);border:2px solid var(--green);border-radius:16px;padding:32px;position:relative;">
-        <div style="position:absolute;top:-12px;right:20px;background:var(--green);color:#000;font-size:.7rem;font-weight:700;padding:4px 12px;border-radius:99px;text-transform:uppercase;letter-spacing:1px;">Most Popular</div>
-        <div style="font-family:'Oswald',sans-serif;font-size:1.1rem;text-transform:uppercase;letter-spacing:2px;color:var(--green-l);margin-bottom:8px;">Growth</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:2.8rem;line-height:1;">$499<span style="font-size:1.2rem;color:var(--text-dim);">/mo</span></div>
-        <p style="color:var(--text-dim);font-size:.88rem;margin:12px 0 20px;">Website + 30 posts/mo scheduled</p>
-        <ul style="list-style:none;padding:0;margin:0 0 24px;font-size:.9rem;line-height:2;color:var(--text-dim);">
-          <li>✅ Everything in Starter</li>
-          <li>✅ 30 Custom Social Posts</li>
-          <li>✅ Automated Scheduling</li>
-          <li>✅ Instagram & Facebook</li>
-          <li>✅ Analytics dashboard</li>
-        </ul>
-        <button onclick="startCheckout('growth')" class="btn-gr" style="width:100%;cursor:pointer;">Get Started</button>
-      </div>
-
-      <!-- Elite -->
-      <div class="pricing-card" data-tier="elite" style="background:var(--glass);border:1px solid var(--border);border-radius:16px;padding:32px;position:relative;">
-        <div style="font-family:'Oswald',sans-serif;font-size:1.1rem;text-transform:uppercase;letter-spacing:2px;color:var(--gold-l);margin-bottom:8px;">Elite</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:2.8rem;line-height:1;">$799<span style="font-size:1.2rem;color:var(--text-dim);">/mo</span></div>
-        <p style="color:var(--text-dim);font-size:.88rem;margin:12px 0 20px;">Website + daily posts + DM outreach + analytics</p>
-        <ul style="list-style:none;padding:0;margin:0 0 24px;font-size:.9rem;line-height:2;color:var(--text-dim);">
-          <li>✅ Everything in Growth</li>
-          <li>✅ Daily Social Posts</li>
-          <li>✅ Automated DM Outreach</li>
-          <li>✅ AI Chatbot Integration</li>
-          <li>✅ Priority support</li>
-        </ul>
-        <button onclick="startCheckout('elite')" class="btn-pu" style="width:100%;cursor:pointer;">Get Started</button>
-      </div>
-    </div>
-  </section>
-
-  <!-- FOOTER -->
+  <!-- ═══ FOOTER ═══ -->
   <footer>
-    <div class="fbrand">
-      <div class="fbrand-name"><span class="fp">{{BUSINESS_LINE1}}</span> <span class="fg">{{BUSINESS_LINE2}}</span></div>
-      <div class="fbrand-sub">Premium Smoke Shop · {{CITY}}</div>
-    </div>
-    <div class="fdisc">Products are intended for adult use only (18+). Please use all products responsibly and
-      in compliance with local laws. Keep all products out of reach of minors.</div>
-    <div class="fright">
-      <a href="https://instagram.com/{{INSTAGRAM}}" class="fig" target="_blank" rel="noopener noreferrer">📸
-        @{{INSTAGRAM}}</a>
-      <div class="fcopy">© 2025 {{BUSINESS_NAME}} · All Rights Reserved · Powered by <a href="https://smokeshopgrowth.com" target="_blank" rel="noopener" style="color:var(--green);text-decoration:none;">smokeshopgrowth.com</a></div>
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <div class="footer-brand">{{BUSINESS_NAME}}</div>
+          <p class="footer-desc">{{CITY}}'s premier smoke shop. Knowledgeable staff, top brands, fair prices — a vibe that keeps customers coming back.</p>
+        </div>
+        <div>
+          <div class="footer-heading">Quick Links</div>
+          <ul class="footer-links">
+            <li><a href="#products">Products</a></li>
+            <li><a href="#about">About Us</a></li>
+            <li><a href="#reviews">Reviews</a></li>
+            <li><a href="#contact">Contact</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer-heading">Contact</div>
+          <ul class="footer-links">
+            <li><a href="tel:{{PHONE_CLEAN}}">{{PHONE}}</a></li>
+            <li><span style="color:var(--text-muted);font-size:14px;">{{ADDRESS}}</span></li>
+            <li><span style="color:var(--text-muted);font-size:14px;">{{CITY}}, {{STATE}}</span></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>&copy; 2026 {{BUSINESS_NAME}}. All rights reserved.</span>
+        <span>Built by <a href="https://smokeshopgrowth.com" target="_blank">Smoke Shop Growth</a></span>
+      </div>
     </div>
   </footer>
 
-  <!-- LEAD FORM MODAL -->
-  <div id="lead-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(10px);z-index:10000;padding:20px;overflow-y:auto;display:flex;align-items:center;justify-content:center;">
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:24px;padding:40px;max-width:480px;width:100%;position:relative;box-shadow:0 30px 60px rgba(0,0,0,0.5);">
-      <button onclick="closeModal()" style="position:absolute;top:20px;right:20px;background:none;border:none;color:var(--text-dim);font-size:1.5rem;cursor:pointer;">&times;</button>
-      <div style="text-align:center;margin-bottom:32px;">
-        <h3 id="modal-title" style="font-family:'Bebas Neue',sans-serif;font-size:2.5rem;margin-bottom:8px;">Claim Your Custom Site</h3>
-        <p style="color:var(--text-dim);font-size:.9rem;">Enter your details to lock in this design and pricing.</p>
-      </div>
-      <form id="lead-capture-form" onsubmit="handleFormSubmit(event)">
-        <input type="hidden" id="form-tier" name="tier">
-        <div style="margin-bottom:20px;">
-          <input type="text" name="contactName" placeholder="Your Name" required style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:12px;padding:14px;color:#fff;font-family:'Inter',sans-serif;">
-        </div>
-        <div style="margin-bottom:20px;">
-          <input type="email" name="email" placeholder="Email Address" required style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:12px;padding:14px;color:#fff;font-family:'Inter',sans-serif;">
-        </div>
-        <div style="margin-bottom:20px;">
-          <input type="tel" name="phone" placeholder="Phone Number" required style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:12px;padding:14px;color:#fff;font-family:'Inter',sans-serif;">
-        </div>
-        <div style="margin-bottom:24px;">
-          <div style="background:var(--bg3);padding:12px;border-radius:12px;border:1px solid var(--border);font-size:.85rem;color:var(--text-dim);">
-            <strong style="color:var(--green-l);">Plan Selected:</strong> <span id="plan-display">Growth</span>
-          </div>
-        </div>
-        <button type="submit" id="submit-btn" style="width:100%;background:linear-gradient(90deg,var(--purple),var(--green));border:none;border-radius:12px;padding:16px;color:#000;font-weight:700;font-size:1.1rem;cursor:pointer;transition:transform 0.2s;">
-          Reserve My Site Now
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <style>
-    #lead-modal:not(.active) { display: none !important; }
-    #lead-modal.active { display: flex !important; }
-  </style>
-
-  <!-- FLOATING CHAT -->
-
-  <div class="chat-bubble">
-    <svg viewBox="0 0 24 24">
-      <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
-    </svg>
-  </div>
-
   <script>
-    gsap.registerPlugin(ScrollTrigger);
-
-    function enterSite() {
-      const ag = document.getElementById('age-gate');
-      gsap.to(ag, {
-        opacity: 0, y: -40, duration: .9, ease: 'power3.inOut',
-        onComplete: () => { ag.style.display = 'none'; introAnims(); }
-      });
-    }
-
-    function introAnims() {
-      gsap.to('.hero-badge', { opacity: 1, duration: .8, delay: .2 });
-      gsap.to('.ht-f', { opacity: 1, y: 0, duration: 1, delay: .4, ease: 'power4.out' });
-      gsap.to('.ht-d', { opacity: 1, y: 0, duration: 1, delay: .6, ease: 'power4.out' });
-      gsap.to('.hero-tag', { opacity: 1, duration: .8, delay: .9 });
-      gsap.to('.hero-acts', { opacity: 1, duration: .8, delay: 1.1 });
-      gsap.to('.scroll-ind', { opacity: 1, duration: .8, delay: 1.6 });
-
-      window.addEventListener('scroll', () => {
-        document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 80);
-      });
-
-      gsap.utils.toArray('.pcard, .budget-card').forEach((el, i) => {
-        gsap.from(el, {
-          scrollTrigger: { trigger: el, start: 'top 88%' },
-          opacity: 0, y: 30, duration: .7,
-          delay: (i % 3) * .08, ease: 'power3.out'
-        });
-      });
-
-      gsap.utils.toArray('.expc').forEach((el, i) => {
-        gsap.from(el, {
-          scrollTrigger: { trigger: el, start: 'top 88%' },
-          opacity: 0, y: 25, duration: .6, delay: i * .1, ease: 'power3.out'
-        });
-      });
-
-      gsap.from('.vl', { scrollTrigger: { trigger: '#visit', start: 'top 75%' }, opacity: 0, x: -40, duration: .9 });
-      gsap.from('.vr', { scrollTrigger: { trigger: '#visit', start: 'top 75%' }, opacity: 0, x: 40, duration: .9, delay: .15 });
-
-      gsap.utils.toArray('.pricing-card').forEach((el, i) => {
-        gsap.from(el, {
-          scrollTrigger: { trigger: el, start: 'top 88%' },
-          opacity: 0, y: 40, duration: .7, delay: i * .12, ease: 'power3.out'
-        });
-      });
-    }
-
-    // Auto-enter if query params present (demo mode — no age gate needed)
-    (function () {
-      const p = new URLSearchParams(window.location.search);
-      const biz = p.get('name') || p.get('business');
-      const city = p.get('city');
-      // If loaded via demo link, skip age gate
-      if (biz || city) {
-        document.getElementById('age-gate').style.display = 'none';
-        introAnims();
-      }
-    })();
-
-    // Today's hours highlight
-    const dayIds = ['h-sun', 'h-mon', 'h-tue', 'h-wed', 'h-thu', 'h-fri', 'h-sat'];
-    const todayRow = document.getElementById(dayIds[new Date().getDay()]);
-    if (todayRow) {
-      todayRow.classList.add('today');
-      const b = document.createElement('span');
-      b.className = 'tbadge'; b.textContent = 'Today';
-      todayRow.querySelector('.hday').appendChild(b);
-    }
-
-    // Filter buttons
-    document.querySelectorAll('.fbtn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-      });
+    // Navbar scroll effect
+    window.addEventListener('scroll', () => {
+      document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50);
     });
 
-    function closeModal() {
-      document.getElementById('lead-modal').classList.remove('active');
+    // Mobile menu
+    function toggleMobile() {
+      document.getElementById('mobile-menu').classList.toggle('open');
+      document.getElementById('mobile-overlay').classList.toggle('open');
     }
 
-    // Stripe Checkout Replacement with Lead Form
-    function startCheckout(tier) {
-      const modal = document.getElementById('lead-modal');
-      const tierInput = document.getElementById('form-tier');
-      const planDisplay = document.getElementById('plan-display');
-      
-      tierInput.value = tier;
-      planDisplay.textContent = tier.charAt(0).toUpperCase() + tier.slice(1) + (tier === 'pro' ? ' ($499)' : ' ($299)');
-      
-      modal.classList.add('active');
-    }
-
-    async function handleFormSubmit(e) {
-      e.preventDefault();
-      const form = e.target;
-      const btn = document.getElementById('submit-btn');
-      const originalText = btn.textContent;
-      
-      const formData = new FormData(form);
-      const payload = {
-        contactName: formData.get('contactName'),
-        email: formData.get('email'),
-        phone: formData.get('phone'),
-        tier: formData.get('tier'),
-        businessName: window.BUSINESS?.name || '{{BUSINESS_NAME}}',
-        city: window.BUSINESS?.city || '{{CITY}}'
-      };
-
-      try {
-        btn.textContent = 'Securing Your Site...';
-        btn.disabled = true;
-
-        const resp = await fetch('/api/submit-lead', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        const data = await resp.json();
-        if (data.success) {
-          form.innerHTML = `
-            <div style="text-align:center;padding:40px 0;">
-              <div style="font-size:3rem;margin-bottom:20px;">🎉</div>
-              <h3 style="font-family:'Bebas Neue',sans-serif;font-size:2rem;margin-bottom:12px;color:var(--green-l);">Success!</h3>
-              <p style="color:var(--text-dim);font-size:.95rem;line-height:1.6;">
-                We've reserved the <strong>${payload.tier}</strong> package for <strong>${payload.businessName}</strong>.<br><br>
-                Check your email (${payload.email}) for the next steps!
-              </p>
-              <button onclick="closeModal()" style="margin-top:24px;background:rgba(255,255,255,0.1);border:1px solid var(--border);padding:10px 20px;border-radius:8px;color:#fff;cursor:pointer;">Close</button>
-            </div>
-          `;
-        } else {
-          throw new Error(data.error || 'Failed to submit');
+    // Intersection Observer for animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.animationPlayState = 'running';
+          observer.unobserve(entry.target);
         }
-      } catch (err) {
-        alert(err.message);
-        btn.textContent = originalText;
-        btn.disabled = false;
-      }
-    }
+      });
+    }, { threshold: 0.1 });
 
-
-    // Show paid confirmation banner
-    (function() {
-      const p = new URLSearchParams(window.location.search);
-      if (p.get('paid') === 'true') {
-        const banner = document.createElement('div');
-        banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:linear-gradient(90deg,#39ff14,#00f0ff);color:#000;text-align:center;padding:14px;font-weight:700;font-size:1rem;';
-        banner.innerHTML = '🎉 Payment received! We\'ll start building your site within 24 hours. Check your email for next steps.';
-        document.body.prepend(banner);
-      }
-    })();
+    document.querySelectorAll('.animate-up, .animate-in').forEach(el => {
+      el.style.animationPlayState = 'paused';
+      observer.observe(el);
+    });
   </script>
-</body>
 
+</body>
 </html>
