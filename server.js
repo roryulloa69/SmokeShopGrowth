@@ -21,6 +21,7 @@ app.use((req, res, next) => {
 
 // Static files
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/demos', express.static(path.join(__dirname, 'public/demos')));
 
 const deployPath = path.join(__dirname, 'deployments');
 if (!fs.existsSync(deployPath)) fs.mkdirSync(deployPath);
