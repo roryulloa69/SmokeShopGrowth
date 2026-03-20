@@ -2330,15 +2330,21 @@
       try {
         const res = await fetch('/api/run', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': 'ssg-austin-2026'
+          },
           body: JSON.stringify({
-            city,
-            state,
-            limit,
-            steps: ['scrape', 'audit', 'generate', 'send']
+            city: city + (state ? ' ' + state : ''),
+            bizType: 'smoke shop',
+            maxResults: limit || 20,
+            skipLighthouse: true,
+            generateDemo: true,
+            exportSheets: false
           })
         });
-        const data = await res.json();
+        let data;
+        try { data = await res.json(); } catch(e) { throw new Error('Server error — check Railway logs'); }
         if (!res.ok) throw new Error(data.error);
 
         currentJobId = data.jobId;
