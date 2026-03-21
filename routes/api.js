@@ -51,10 +51,12 @@ router.post('/api/run', pipelineRunLimiter, apiKeyAuth, (req, res) => {
         leads: path.join(dataDir, 'leads.csv'),
         audited: path.join(dataDir, 'audited_leads.csv'),
         socialAudited: path.join(dataDir, 'social_audited.csv'),
+        enriched: path.join(dataDir, 'enriched_leads.csv'),
         outreach: path.join(dataDir, 'outreach_messages.csv'),
         demos: path.join('public', 'demos', citySlug),
         demo: path.join(dataDir, 'demo_leads.csv'),
         emailLog: path.join('logs', 'email_log.csv'),
+        callLog: path.join('logs', 'call_log.csv'),
     };
 
     // Persist job to DB (Fix #10)
@@ -638,6 +640,76 @@ router.get('/api/payments/stats', (req, res) => {
         console.error('[API] Payment stats error:', err);
         res.status(500).json({ error: 'Failed to fetch payment stats' });
     }
+});
+
+// ── POST /api/run-single — run pipeline on one business (no scraping) ──────
+router.post('/api/run-single', apiKeyAuth, pipelineRunLimiter, async (req, res) => {
+    const {
+        businessName,
+        website,
+        phone = '',
+        city = '',
+        generateDemo = true,
+        makeCall = false,
+        sendEmail = false,
+    } = req.body || {};
+
+    if (!businessName) return res.status(400).json({ error: 'businessName is required' });
+
+    const jobId = `single-${Date.now()}`;
+    const dataDir = path.join('data', jobId);
+    fs.mkdirSync(dataDir, { recursive: true });
+    fs.mkdirSync('logs', { recursive: true });
+
+    // Write a single-row leads CSV so the pipeline can use it
+    const normalizedWebsite = website ? (website.startsWith('http') ? website : `https://${website}`) : '';
+    const leadsPath = path.join(dataDir, 'leads.csv');
+    fs.writeFileSync(leadsPath,
+        `name,phone,website,city,address,rating,reviews,business_name\n` +
+        `"${businessName}","${phone}","${normalizedWebsite}","${city}","","","","${businessName}"\n`
+    );
+
+    const files = {
+        leads: leadsPath,
+        audited: path.join(dataDir, 'audited_leads.csv'),
+        socialAudited: path.join(dataDir, 'social_audited.csv'),
+        enriched: path.join(dataDir, 'enriched_leads.csv'),
+        outreach: path.join(dataDir, 'outreach_messages.csv'),
+        demos: path.join('public', 'demos', jobId),
+        demo: path.join(dataDir, 'demo_leads.csv'),
+        emailLog: path.join('logs', `email_log_${jobId}.csv`),
+        callLog: path.join('logs', `call_log_${jobId}.csv`),
+    };
+
+    const job = {
+        status: 'running',
+        step: 0,
+        logs: [],
+        city: city || businessName,
+        bizType: 'smoke shop',
+        maxResults: 1,
+        skipLighthouse: true,
+        citySlug: jobId,
+        dataDir,
+        files,
+        generateDemo,
+        makeCall,
+        sendEmail,
+        exportSheets: false,
+        sheetsId: null,
+        baseUrl: `${req.protocol}://${req.get('host')}`,
+    };
+
+    jobs.set(jobId, job);
+    res.json({ jobId, message: `Single-business pipeline started for "${businessName}"` });
+
+    // Run async
+    const { runSingleBusiness } = require('../services/pipeline');
+    runSingleBusiness(jobId).catch(err => {
+        pushLog(jobId, `❌ Pipeline error: ${err.message}`, 'error');
+        job.status = 'error';
+        broadcast(jobId, { type: 'error', message: err.message });
+    });
 });
 
 module.exports = router;
