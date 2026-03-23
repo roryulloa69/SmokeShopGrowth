@@ -1,15 +1,17 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=Outfit:wght@500;700;800&family=JetBrains+Mono:wght@600;700&display=swap');
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   styles.css — Premium Smoke Shop Template · Aura-Inspired Dark Design
+   styles.css — Smoke Shop Growth Template
+   Redesigned with taste-skill v2 · Variance:8 · Motion:6 · Density:4
 ───────────────────────────────────────────────────────────────────────────── */
 
 :root {
-  --accent: #a78bfa;
-  --second: #34d399;
-  --bg: #09090b;
+  --accent: #10b981;
+  --accent-hover: #059669;
+  --accent-glow: rgba(16, 185, 129, 0.15);
+  --bg: #0b0b0b;
   --surface: rgba(255, 255, 255, 0.03);
-  --surface-border: rgba(255, 255, 255, 0.06);
+  --surface-border: rgba(255, 255, 255, 0.07);
   --text: #f4f4f5;
   --muted: #71717a;
   --radius: 20px;
@@ -30,7 +32,7 @@ html {
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Inter', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   overflow-x: hidden;
   line-height: 1.6;
 }
@@ -56,7 +58,6 @@ a {
   border-radius: 50%;
   filter: blur(140px);
   z-index: -1;
-  opacity: 0.25;
   animation: pulseGlow 12s ease-in-out infinite alternate;
 }
 
@@ -66,6 +67,7 @@ a {
   width: 50vw;
   height: 50vw;
   background: var(--accent);
+  opacity: 0.1;
 }
 
 .glow-2 {
@@ -73,25 +75,27 @@ a {
   right: -10%;
   width: 40vw;
   height: 40vw;
-  background: var(--second);
+  background: var(--accent);
+  opacity: 0.07;
   animation-delay: -6s;
 }
 
 @keyframes pulseGlow {
   0% {
     transform: scale(1);
-    opacity: 0.2;
+    opacity: 0.07;
   }
 
   100% {
     transform: scale(1.15);
-    opacity: 0.3;
+    opacity: 0.12;
   }
 }
 
 /* ── Typography & Gradients ────────────────────────────────────────────────── */
+/* Hero h1 span only — emerald gradient */
 .text-gradient {
-  background: linear-gradient(135deg, var(--accent), var(--second));
+  background: linear-gradient(135deg, #10b981, #34d399);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -99,7 +103,6 @@ a {
 
 .neon-text {
   color: var(--accent);
-  text-shadow: 0 0 20px rgba(167, 139, 250, 0.3);
 }
 
 /* ── Navigation ────────────────────────────────────────────────────────────── */
@@ -109,7 +112,7 @@ a {
   left: 0;
   width: 100%;
   padding: 1rem 2rem;
-  background: rgba(9, 9, 11, 0.5);
+  background: rgba(11, 11, 11, 0.5);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--surface-border);
@@ -137,7 +140,7 @@ a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Inter', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-weight: 600;
   font-size: 0.9rem;
   padding: 0.7rem 1.4rem;
@@ -148,14 +151,15 @@ a {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--accent), var(--second));
+  background: var(--accent);
   color: #fff;
-  box-shadow: 0 6px 20px -4px rgba(167, 139, 250, 0.35);
+  box-shadow: 0 6px 20px -4px rgba(16, 185, 129, 0.35);
 }
 
 .btn-primary:hover {
+  background: var(--accent-hover);
   transform: translateY(-2px);
-  box-shadow: 0 12px 28px -4px rgba(167, 139, 250, 0.45);
+  box-shadow: 0 12px 28px -4px rgba(16, 185, 129, 0.45);
 }
 
 .btn-glass {
@@ -175,23 +179,24 @@ a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Inter', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-weight: 600;
   font-size: 1rem;
   padding: 0.85rem 1.75rem;
   border-radius: 999px;
   cursor: pointer;
   border: none;
-  background: linear-gradient(135deg, var(--accent), var(--second));
+  background: var(--accent);
   color: #fff;
-  box-shadow: 0 6px 20px -4px rgba(167, 139, 250, 0.35);
+  box-shadow: 0 6px 20px -4px rgba(16, 185, 129, 0.35);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   text-decoration: none;
 }
 
 .glow-btn:hover {
+  background: var(--accent-hover);
   transform: translateY(-2px);
-  box-shadow: 0 12px 28px -4px rgba(167, 139, 250, 0.5);
+  box-shadow: 0 12px 28px -4px rgba(16, 185, 129, 0.5);
 }
 
 /* ── Hero Section ──────────────────────────────────────────────────────────── */
@@ -336,13 +341,15 @@ section {
   background: rgba(255, 255, 255, 0.03);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-top-color: rgba(255, 255, 255, 0.1);
   border-radius: 16px;
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
   transition: transform 0.3s, background 0.3s;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 
 .info-card:hover {
@@ -365,7 +372,7 @@ section {
 }
 
 .info-value a:hover {
-  color: var(--second);
+  color: var(--accent);
 }
 
 /* ── Categories (Pills) ────────────────────────────────────────────────────── */
@@ -378,20 +385,20 @@ section {
 .category-pill {
   padding: 0.55rem 1.15rem;
   border-radius: 999px;
-  background: rgba(52, 211, 153, 0.08);
-  color: var(--second);
-  border: 1px solid rgba(52, 211, 153, 0.15);
+  background: rgba(16, 185, 129, 0.08);
+  color: var(--accent);
+  border: 1px solid rgba(16, 185, 129, 0.15);
   font-weight: 500;
   font-size: 0.9rem;
   transition: all 0.3s ease;
 }
 
 .category-pill:hover {
-  background: rgba(52, 211, 153, 0.15);
+  background: rgba(16, 185, 129, 0.15);
   transform: scale(1.05);
 }
 
-/* ── Features (Glass Cards) ────────────────────────────────────────────────── */
+/* ── Features (Old bento grid — kept for reference, replaced by editorial list) */
 .features-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -402,12 +409,14 @@ section {
   background: rgba(255, 255, 255, 0.03);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-top-color: rgba(255, 255, 255, 0.1);
   border-radius: var(--radius);
   padding: 2.25rem;
   position: relative;
   overflow: hidden;
   transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.35s ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 
 .feature-bento::after {
@@ -417,14 +426,14 @@ section {
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, var(--accent), var(--second));
+  background: var(--accent);
   opacity: 0;
   transition: opacity 0.35s ease;
 }
 
 .feature-bento:hover {
   transform: translateY(-6px);
-  box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 
 .feature-bento:hover::after {
@@ -463,10 +472,12 @@ section {
   background: rgba(255, 255, 255, 0.03);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-top-color: rgba(255, 255, 255, 0.1);
   border-radius: var(--radius);
   padding: 2rem;
   transition: transform 0.3s ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 
 .testimonial-card:hover {
@@ -499,7 +510,7 @@ section {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), var(--second));
+  background: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -532,24 +543,27 @@ section {
   background: rgba(255, 255, 255, 0.03);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-top-color: rgba(255, 255, 255, 0.1);
   border-radius: var(--radius);
   padding: 3rem 2.5rem;
   position: relative;
   overflow: hidden;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 
 .pricing-card:hover {
   transform: translateY(-8px);
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 
 .pricing-card.popular {
-  border-color: rgba(167, 139, 250, 0.3);
+  border-color: rgba(16, 185, 129, 0.3);
+  border-top-color: rgba(16, 185, 129, 0.4);
   background: rgba(255, 255, 255, 0.05);
   transform: scale(1.05);
-  box-shadow: 0 0 40px -10px rgba(167, 139, 250, 0.15);
+  box-shadow: 0 0 40px -10px rgba(16, 185, 129, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.07);
   z-index: 1;
 }
 
@@ -575,7 +589,7 @@ section {
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, var(--accent), var(--second));
+  background: var(--accent);
   opacity: 0;
   transition: opacity 0.3s;
 }
@@ -593,7 +607,7 @@ section {
 
 .popular-badge {
   display: inline-block;
-  background: linear-gradient(135deg, var(--accent), var(--second));
+  background: var(--accent);
   color: #fff;
   font-size: 0.75rem;
   font-weight: 700;
@@ -641,7 +655,7 @@ section {
 
 .checklist li::before {
   content: '✓';
-  color: var(--second);
+  color: var(--accent);
   font-weight: 700;
   font-size: 0.9rem;
 }
@@ -662,13 +676,15 @@ section {
   background: rgba(255, 255, 255, 0.03);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-top-color: rgba(255, 255, 255, 0.1);
   border-radius: var(--radius);
   padding: 2.5rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
   text-align: left;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 
 .premium-form input {
@@ -677,7 +693,7 @@ section {
   color: var(--text);
   padding: 0.9rem 1.15rem;
   border-radius: 12px;
-  font-family: 'Inter', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 0.95rem;
   transition: all 0.3s;
 }
@@ -689,8 +705,8 @@ section {
 .premium-form input:focus {
   outline: none;
   border-color: var(--accent);
-  background: rgba(167, 139, 250, 0.04);
-  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.2);
+  background: rgba(16, 185, 129, 0.04);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
 }
 
 /* ── Footer ────────────────────────────────────────────────────────────────── */
@@ -734,7 +750,7 @@ footer {
   height: 300px;
   border-radius: 50%;
   pointer-events: none;
-  background: radial-gradient(circle, rgba(167, 139, 250, 0.08) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.06) 0%, transparent 70%);
   transform: translate(-50%, -50%);
   z-index: 0;
   transition: opacity 0.3s;
@@ -838,8 +854,7 @@ html:not([data-dark="true"]) {
   --surface-border: rgba(0, 0, 0, 0.1);
   --text: #1a1a1a;
   --muted: #666;
-  --accent: #8b5cf6;
-  --second: #059669;
+  --accent: #059669;
 }
 
 html:not([data-dark="true"]) body {
@@ -900,7 +915,7 @@ html:not([data-dark="true"]) .pricing-card {
   outline: none;
   border-color: var(--accent);
   background: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 0 12px rgba(167, 139, 250, 0.3);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.25);
 }
 
 .form-group input:invalid:not(:placeholder-shown) {
@@ -929,7 +944,7 @@ html:not([data-dark="true"]) .form-group input::placeholder {
 html:not([data-dark="true"]) .form-group input:focus {
   border-color: var(--accent);
   background: rgba(0, 0, 0, 0.08);
-  box-shadow: 0 0 12px rgba(139, 92, 246, 0.2);
+  box-shadow: 0 0 12px rgba(5, 150, 105, 0.2);
 }
 
 .premium-form {
@@ -953,4 +968,80 @@ html:not([data-dark="true"]) .form-group input:focus {
   .nav-actions {
     gap: 0.4rem;
   }
+}
+
+/* ── Trust Badge Icons ─────────────────────────────────────────────────────── */
+.trust-badge-icon {
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.3s ease;
+}
+
+.trust-badge:hover .trust-badge-icon {
+  color: var(--accent);
+  transition: color 0.3s ease;
+}
+
+/* ── Features Editorial List ───────────────────────────────────────────────── */
+.features-list {
+  border-top: 1px solid var(--surface-border);
+}
+
+.feature-item {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 2rem;
+  padding: 3rem 0;
+  border-bottom: 1px solid var(--surface-border);
+  transition: background 0.3s ease;
+}
+
+.feature-item:hover {
+  background: rgba(255, 255, 255, 0.01);
+}
+
+@media (max-width: 600px) {
+  .feature-item {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 2rem 0;
+  }
+}
+
+.feature-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.12em;
+  padding-top: 0.5rem;
+}
+
+.feature-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.07);
+  border: 1px solid rgba(16, 185, 129, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+  color: var(--accent);
+}
+
+.feature-item h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.6rem;
+  letter-spacing: -0.02em;
+}
+
+.feature-item p {
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.7;
+  max-width: 52ch;
 }

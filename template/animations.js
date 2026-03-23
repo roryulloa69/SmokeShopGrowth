@@ -156,8 +156,7 @@ function initSmokeCanvas() {
             this.size = Math.random() * 35 + 15;
             this.speedX = Math.random() * 0.8 - 0.4;
             this.speedY = Math.random() * -0.8 - 0.3;
-            const isPurple = Math.random() > 0.5;
-            this.color = isPurple ? "rgba(167, 139, 250, 0.025)" : "rgba(52, 211, 153, 0.025)";
+            this.color = Math.random() > 0.5 ? "rgba(16, 185, 129, 0.018)" : "rgba(16, 185, 129, 0.012)";
         }
         update() {
             this.x += this.speedX;

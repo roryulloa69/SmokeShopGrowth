@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title data-bind="title">Smoke Shop Premium</title>
   <meta name="description" data-bind="meta-description" content="Premium smoke shop website template." />
-  <meta name="theme-color" content="#a78bfa" />
+  <meta name="theme-color" content="#10b981" />
   <meta name="format-detection" content="telephone=yes" />
   
   <!-- Open Graph Tags -->
@@ -55,7 +55,7 @@
       top: 0;
       left: 0;
       right: 0;
-      background: linear-gradient(135deg, var(--accent), var(--second));
+      background: var(--accent);
       color: white;
       padding: 10px 20px;
       display: flex;
@@ -81,20 +81,20 @@
     }
 
     .sticky-cta-btn {
-      background: white;
-      color: var(--accent);
+      background: rgba(0, 0, 0, 0.2);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
       padding: 8px 20px;
       border-radius: 999px;
       font-weight: 700;
       font-size: 0.85rem;
       text-decoration: none;
       transition: all 0.3s ease;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
 
     .sticky-cta-btn:hover {
+      background: rgba(0, 0, 0, 0.35);
       transform: scale(1.05);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     }
 
     .nav.scrolled {
@@ -123,7 +123,7 @@
       width: 28px;
       height: 28px;
       border-radius: 50%;
-      background: linear-gradient(135deg, var(--accent), var(--second));
+      background: var(--accent);
       border: 2px solid var(--bg);
       margin-left: -10px;
       display: flex;
@@ -140,7 +140,7 @@
 
     .social-proof-ticker .proof-text {
       font-size: 0.85rem;
-      color: var(--second);
+      color: var(--accent);
       font-weight: 500;
     }
 
@@ -155,8 +155,8 @@
 
     /* ── Countdown Timer ────────────────────────────────────────────────────── */
     .countdown-banner {
-      background: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(245, 158, 11, 0.12));
-      border: 1px solid rgba(239, 68, 68, 0.2);
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--surface-border);
       border-radius: 16px;
       padding: 20px 28px;
       margin: 32px auto;
@@ -167,7 +167,9 @@
     .countdown-title {
       font-size: 1rem;
       font-weight: 600;
-      color: #fca5a5;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
       margin-bottom: 12px;
       display: flex;
       align-items: center;
@@ -188,7 +190,7 @@
     }
 
     .countdown-value {
-      font-family: 'JetBrains Mono', 'Outfit', monospace;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 2rem;
       font-weight: 800;
       color: var(--text);
@@ -229,11 +231,6 @@
 
     .trust-badge:hover {
       opacity: 1;
-    }
-
-    .trust-badge-icon {
-      font-size: 2rem;
-      filter: grayscale(50%);
     }
 
     .trust-badge-text {
@@ -375,18 +372,17 @@
     }
 
     .exit-popup-icon {
-      font-size: 3.5rem;
       margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .exit-popup h3 {
       font-size: 1.75rem;
       font-weight: 800;
       margin-bottom: 12px;
-      background: linear-gradient(135deg, var(--accent), var(--second));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      color: var(--accent);
     }
 
     .exit-popup p {
@@ -397,7 +393,7 @@
     }
 
     .exit-popup .discount-code {
-      background: rgba(167, 139, 250, 0.1);
+      background: rgba(16, 185, 129, 0.06);
       border: 2px dashed var(--accent);
       border-radius: 12px;
       padding: 16px;
@@ -440,7 +436,7 @@
       gap: 10px;
       font-size: 0.82rem;
       font-weight: 500;
-      color: var(--second);
+      color: var(--accent);
       z-index: 100;
       animation: slideInLeft 0.5s ease-out 2s both;
     }
@@ -448,7 +444,7 @@
     .live-dot {
       width: 8px;
       height: 8px;
-      background: var(--second);
+      background: var(--accent);
       border-radius: 50%;
       animation: pulse 2s ease-in-out infinite;
     }
@@ -471,22 +467,22 @@
       width: 60px;
       height: 60px;
       border-radius: 50%;
-      background: linear-gradient(135deg, var(--accent), var(--second));
+      background: var(--accent);
       color: white;
-      font-size: 1.5rem;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       z-index: 100;
-      box-shadow: 0 8px 24px rgba(167, 139, 250, 0.4);
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       border: none;
     }
 
     .fab-contact:hover {
+      background: var(--accent-hover);
       transform: scale(1.1);
-      box-shadow: 0 12px 32px rgba(167, 139, 250, 0.5);
+      box-shadow: 0 12px 32px rgba(16, 185, 129, 0.4);
     }
 
     .fab-contact:active {
@@ -506,19 +502,22 @@
       align-items: center;
       gap: 16px;
       background: rgba(255, 255, 255, 0.03);
-      border: 2px solid rgba(52, 211, 153, 0.2);
+      border: 1px solid rgba(16, 185, 129, 0.15);
       border-radius: 24px;
       padding: 32px 48px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
     }
 
     .guarantee-icon {
-      font-size: 3rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .guarantee-title {
       font-size: 1.25rem;
       font-weight: 700;
-      color: var(--second);
+      color: var(--accent);
     }
 
     .guarantee-text {
@@ -565,7 +564,6 @@
       .fab-contact {
         width: 52px;
         height: 52px;
-        font-size: 1.3rem;
       }
 
       .exit-popup {
@@ -583,7 +581,8 @@
   <!-- Sticky CTA Bar -->
   <div class="sticky-cta" id="sticky-cta">
     <span class="sticky-cta-text">
-      <span>Limited Time:</span> <strong>20% OFF</strong> all website packages
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span>Launch Pricing:</span> <strong>20% OFF</strong> all packages
     </span>
     <a href="#pricing" class="sticky-cta-btn">Claim Offer</a>
   </div>
@@ -645,7 +644,8 @@
   <!-- ── Countdown Timer ────────────────────────────────────────────────────── -->
   <div class="countdown-banner gs-reveal">
     <div class="countdown-title">
-      <span>&#9200;</span> Launch Pricing Ends In
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Launch Pricing Ends In
     </div>
     <div class="countdown-timer" id="countdown-timer">
       <div class="countdown-unit">
@@ -687,23 +687,33 @@
   <!-- ── Trust Badges ───────────────────────────────────────────────────────── -->
   <div class="trust-badges gs-reveal">
     <div class="trust-badge">
-      <span class="trust-badge-icon">&#128274;</span>
+      <span class="trust-badge-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </span>
       <span class="trust-badge-text">SSL Secured</span>
     </div>
     <div class="trust-badge">
-      <span class="trust-badge-icon">&#128241;</span>
+      <span class="trust-badge-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg>
+      </span>
       <span class="trust-badge-text">Mobile Optimized</span>
     </div>
     <div class="trust-badge">
-      <span class="trust-badge-icon">&#9889;</span>
+      <span class="trust-badge-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </span>
       <span class="trust-badge-text">Fast Loading</span>
     </div>
     <div class="trust-badge">
-      <span class="trust-badge-icon">&#127919;</span>
+      <span class="trust-badge-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </span>
       <span class="trust-badge-text">SEO Ready</span>
     </div>
     <div class="trust-badge">
-      <span class="trust-badge-icon">&#128176;</span>
+      <span class="trust-badge-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+      </span>
       <span class="trust-badge-text">Money Back</span>
     </div>
   </div>
@@ -722,24 +732,39 @@
   <!-- ── Features ──────────────────────────────────────────────────────────── -->
   <section>
     <div class="section-inner">
-      <h2 class="section-title text-gradient text-center mb-3-5rem">
+      <h2 class="section-title text-center mb-3-5rem">
         Why <span data-bind="name">Your Shop</span> Needs This
       </h2>
-      <div class="features-grid">
-        <div class="feature-bento gs-reveal">
-          <span class="feature-icon">&#128241;</span>
-          <h3>Mobile Perfection</h3>
-          <p>Over 80% of smoke shop searches happen on phones. This site feels like a native app.</p>
+      <div class="features-list">
+        <div class="feature-item gs-reveal">
+          <span class="feature-num">01</span>
+          <div class="feature-item-content">
+            <div class="feature-icon-wrap">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg>
+            </div>
+            <h3>Mobile Perfection</h3>
+            <p>Over 80% of smoke shop searches happen on phones. This site feels like a native app — fast, responsive, and frictionless on every screen size.</p>
+          </div>
         </div>
-        <div class="feature-bento gs-reveal">
-          <span class="feature-icon">&#128205;</span>
-          <h3>Local SEO Boost</h3>
-          <p>Structured perfectly for Google Maps to capture customers right around the corner.</p>
+        <div class="feature-item gs-reveal">
+          <span class="feature-num">02</span>
+          <div class="feature-item-content">
+            <div class="feature-icon-wrap">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            </div>
+            <h3>Local SEO Dominance</h3>
+            <p>Schema markup, optimized metadata, and Google Business Profile integration help your shop show up first when locals search nearby.</p>
+          </div>
         </div>
-        <div class="feature-bento gs-reveal">
-          <span class="feature-icon">&#9889;</span>
-          <h3>Lightning Fast</h3>
-          <p>Built with modern web standards ensuring near-instant load times on any connection.</p>
+        <div class="feature-item gs-reveal">
+          <span class="feature-num">03</span>
+          <div class="feature-item-content">
+            <div class="feature-icon-wrap">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <h3>Lightning Fast</h3>
+            <p>Built with modern web standards and zero bloat. Near-instant load times on any connection — because slow sites lose customers before the page even opens.</p>
+          </div>
         </div>
       </div>
     </div>
@@ -758,7 +783,9 @@
   <!-- ── Guarantee Section ──────────────────────────────────────────────────── -->
   <div class="guarantee-section gs-reveal">
     <div class="guarantee-badge">
-      <span class="guarantee-icon">&#128737;&#65039;</span>
+      <span class="guarantee-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent)"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+      </span>
       <span class="guarantee-title">30-Day Money Back Guarantee</span>
       <span class="guarantee-text">Not satisfied with your website? Get a full refund within 30 days, no questions asked.</span>
     </div>
@@ -767,7 +794,7 @@
   <!-- ── Pricing ───────────────────────────────────────────────────────────── -->
   <section id="pricing">
     <div class="section-inner">
-      <h2 class="section-title text-gradient text-center mb-3-5rem">Flexible Pricing</h2>
+      <h2 class="section-title text-center mb-3-5rem">Flexible Pricing</h2>
       <div class="pricing-grid">
 
         <!-- Tier 1 -->
@@ -801,7 +828,7 @@
             <li>Google Business Optimization</li>
             <li>Priority Support</li>
           </ul>
-          <a href="https://buy.stripe.com/dRmfZgcby1zs9ud2uh1Jm06" class="glow-btn btn-block-large stripe-checkout-btn" data-tier="growth" target="_blank"
+          <a href="https://buy.stripe.com/dRmfZgcby1zs9ud2uh1Jm06" class="btn btn-primary btn-block-large stripe-checkout-btn" data-tier="growth" target="_blank"
             rel="noopener noreferrer">Get Growth - $299</a>
         </div>
 
@@ -943,14 +970,16 @@
 
   <!-- ── Floating Action Button ────────────────────────────────────────────── -->
   <button class="fab-contact" onclick="scrollToContact()" aria-label="Contact us">
-    &#9993;
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
   </button>
 
   <!-- ── Exit Intent Popup ─────────────────────────────────────────────────── -->
   <div class="exit-popup-overlay" id="exit-popup">
     <div class="exit-popup">
       <button class="exit-popup-close" onclick="closeExitPopup()" aria-label="Close">&times;</button>
-      <div class="exit-popup-icon">&#127873;</div>
+      <div class="exit-popup-icon">
+        <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent)"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+      </div>
       <h3>Wait! Don't Miss Out</h3>
       <p>Get an exclusive 10% discount on any website package when you sign up today.</p>
       <div class="discount-code">
@@ -1260,7 +1289,7 @@
                 });
               }
 
-              form.innerHTML = '<div class="text-center" style="padding:2rem"><p class="font-bold" style="color:var(--second); font-size:1.4rem;">Request Received!</p><p style="color:var(--muted); margin-bottom:1.5rem;">Ready to get your website live? Pick a plan above to get started instantly.</p><a href="#pricing" class="btn btn-primary" style="display:inline-block;">View Pricing</a></div>';
+              form.innerHTML = '<div class="text-center" style="padding:2rem"><p class="font-bold" style="color:var(--accent); font-size:1.4rem;">Request Received!</p><p style="color:var(--muted); margin-bottom:1.5rem;">Ready to get your website live? Pick a plan above to get started instantly.</p><a href="#pricing" class="btn btn-primary" style="display:inline-block;">View Pricing</a></div>';
             } else {
               alert('Error: ' + (data.error || 'Unknown error'));
               submitBtn.disabled = false;
