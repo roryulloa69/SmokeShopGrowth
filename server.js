@@ -37,6 +37,19 @@ const webhookLimiter = rateLimit({
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ──────────────────────────────────────────────
+// Route: frontend config (safe public values only)
+// The browser fetches this to get the Vapi public key for the Web SDK.
+// NEVER include server-side secrets here.
+// ──────────────────────────────────────────────
+app.get('/api/config', (req, res) => {
+    res.json({
+        vapiPublicKey: process.env.VAPI_PUBLIC_KEY || null,
+        vapiAssistantId: process.env.VAPI_ASSISTANT_ID || null,
+        demoBaeUrl: process.env.DEMO_BASE_URL || null,
+    });
+});
+
+// ──────────────────────────────────────────────
 // Persistent job store
 // Jobs are kept in memory for fast SSE access and flushed to disk so they
 // survive server restarts.  Only serialisable fields are persisted (clients
@@ -242,8 +255,6 @@ app.post('/webhook/call', webhookLimiter, async (req, res) => {
         return res.status(500).json({ error: 'ELEVENLABS_PHONE_NUMBER_ID not set. Please add it to your .env file.' });
     }
 
-    // Note: This webhook call is not associated with a specific job, so we use a placeholder 'call'
-    // for the jobId. This log will not appear in the SSE stream for a pipeline job.
     pushLog('call', `Attempting call to ${phone} using agent ${agentId}…`, 'log');
 
     try {
@@ -257,7 +268,6 @@ app.post('/webhook/call', webhookLimiter, async (req, res) => {
                 agent_id: agentId,
                 agent_phone_number_id: phoneNumberId,
                 to_number: phone,
-                // Passing dynamic variables (might need to go inside conversation_initiation_client_data depending on your firm config)
                 dynamic_variables: { business_name, city, agent_name },
             }),
         });
@@ -337,7 +347,7 @@ async function runPipeline(jobId) {
             'generate_demo.js',
             '--input', fs.existsSync(job.files.outreach) ? job.files.outreach : job.files.audited,
             '--output', job.files.demo,
-            '--limit', '10' // Only do top 10 to save API costs & time
+            '--limit', '10'
         ]);
         const demoCount = await countCsvRows(job.files.demo);
         pushLog(jobId, `✅ Generated demo video entries  (${demoCount} leads processed).`, 'success');
@@ -351,7 +361,6 @@ async function runPipeline(jobId) {
     if (job.exportSheets && job.sheetsId) {
         pushLog(jobId, '📊 Exporting to Google Sheets…', 'step');
         try {
-            // Determine the final file to export
             let finalOutput = job.files.audited;
             if (fs.existsSync(job.files.demo)) finalOutput = job.files.demo;
             else if (fs.existsSync(job.files.outreach)) finalOutput = job.files.outreach;
@@ -405,7 +414,7 @@ function pushLog(jobId, message, type = 'log') {
     if (!job) return;
     job.logs.push(entry);
     broadcast(jobId, entry);
-    _saveJobsToDisk(); // persist after every log entry
+    _saveJobsToDisk();
 }
 
 function broadcast(jobId, payload) {
@@ -438,7 +447,6 @@ function countCsvRows(filePath) {
 // Google Sheets export
 // ──────────────────────────────────────────────
 async function exportToSheets(spreadsheetId, csvPath, sheetTitle) {
-    // Requires: credentials.json (service account) in project root
     const credPath = path.join(__dirname, 'credentials.json');
     if (!fs.existsSync(credPath)) {
         throw new Error('credentials.json not found. See README for Google Sheets setup.');
@@ -450,7 +458,6 @@ async function exportToSheets(spreadsheetId, csvPath, sheetTitle) {
     });
     const sheets = google.sheets({ version: 'v4', auth });
 
-    // Read CSV into 2D array
     const rows = await new Promise((resolve, reject) => {
         const data = [];
         let headerPushed = false;
@@ -467,7 +474,6 @@ async function exportToSheets(spreadsheetId, csvPath, sheetTitle) {
             .on('error', reject);
     });
 
-    // Create or clear a sheet tab named after the city
     const meta = await sheets.spreadsheets.get({ spreadsheetId });
     const existingSheet = meta.data.sheets.find(
         s => s.properties.title === sheetTitle
