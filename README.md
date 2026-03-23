@@ -117,6 +117,10 @@ See `.env.example` for the full list.
 
 ## API Endpoints
 
+> **Note:** The Node.js dashboard server and the Python/Flask webhook service are independent processes with separate in-memory stores. Endpoints that appear in both sections are implemented independently and do **not** share state.
+
+### Node.js Dashboard Server (default port 3000)
+
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/health` | Health check — returns uptime & job count |
@@ -127,6 +131,16 @@ See `.env.example` for the full list.
 | `POST` | `/api/create-checkout` | Create Stripe checkout session |
 | `POST` | `/webhook/call` | Trigger an ElevenLabs outbound call |
 | `POST` | `/api/template-submission` | Accept a lead form submission |
+| `GET` | `/api/template-submissions` | List all stored form submissions |
+
+### Python/Flask Webhook Service (default port 4242)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/run` | Start a pipeline job |
+| `GET` | `/api/jobs` | List all pipeline jobs |
+| `POST` | `/api/template-submission` | Accept a lead form submission |
+| `GET` | `/api/template-submissions` | List all stored form submissions |
 
 ## Troubleshooting
 

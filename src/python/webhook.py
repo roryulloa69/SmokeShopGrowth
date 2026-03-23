@@ -1,5 +1,10 @@
 import os
 import smtplib
+import subprocess
+import sys
+import threading
+import uuid
+from datetime import datetime
 from email.message import EmailMessage
 
 import stripe
@@ -28,6 +33,15 @@ stripe.api_key = STRIPE_API_KEY
 endpoint_secret = STRIPE_WEBHOOK_SECRET
 
 app = Flask(__name__)
+
+# In-memory job store for pipeline runs
+pipeline_jobs = {}  # job_id → { status, city, bizType, started_at, finished_at, error }
+
+# In-memory store for template/form submissions
+template_submissions = []
+
+# Absolute path to scraper.py (same directory as this file)
+_SCRAPER_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scraper.py')
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -331,23 +345,6 @@ def vapi_webhook():
     return jsonify({"status": "received"}), 200
 
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# IN-MEMORY STORES (add these near the top of webhook.py, after app = Flask(__name__))
-# ─────────────────────────────────────────────────────────────────────────────
-
-import subprocess
-import threading
-import uuid
-from datetime import datetime
-
-# In-memory job store for pipeline runs
-pipeline_jobs = {}  # job_id → { status, city, bizType, started_at, finished_at, error }
-
-# In-memory store for template/form submissions
-template_submissions = []
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # ROUTE: Start Pipeline Job (for n8n Workflow 1)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -357,9 +354,9 @@ def run_pipeline_async(job_id, city, biz_type, max_results):
     try:
         pipeline_jobs[job_id]['status'] = 'running'
 
-        # Run scraper.py as a subprocess
+        # Run scraper.py as a subprocess using the current interpreter and absolute path
         result = subprocess.run(
-            ['python', 'src/python/scraper.py',
+            [sys.executable, _SCRAPER_PATH,
              '--city', city,
              '--type', biz_type,
              '--max-results', str(max_results),
