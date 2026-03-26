@@ -4,6 +4,7 @@ const router = require('express').Router();
 const path = require('path');
 const fs = require('fs');
 const csv = require('csv-parser');
+const storage = require('../services/storage');
 const n8nService = require('../src/node/n8n_service');
 const { jobs, makeJobId, pushLog, broadcast } = require('../services/sse');
 const { runPipeline } = require('../services/pipeline');
@@ -33,22 +34,8 @@ router.post('/api/run', pipelineRunLimiter, apiKeyAuth, asyncHandler(async (req,
 
     const jobId = makeJobId();
     const citySlug = city.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    const dataDir = path.join('data', citySlug);
-
-    fs.mkdirSync(dataDir, { recursive: true });
-    fs.mkdirSync('logs', { recursive: true });
-
-    const files = {
-        leads: path.join(dataDir, 'leads.csv'),
-        audited: path.join(dataDir, 'audited_leads.csv'),
-        socialAudited: path.join(dataDir, 'social_audited.csv'),
-        enriched: path.join(dataDir, 'enriched_leads.csv'),
-        outreach: path.join(dataDir, 'outreach_messages.csv'),
-        demos: path.join('public', 'demos', citySlug),
-        demo: path.join(dataDir, 'demo_leads.csv'),
-        emailLog: path.join('logs', 'email_log.csv'),
-        callLog: path.join('logs', 'call_log.csv'),
-    };
+    const { relativeDir, files } = storage.createJobDirectory(citySlug);
+    const dataDir = relativeDir;
 
     // Persist job to DB
     try {
@@ -176,9 +163,7 @@ router.post('/api/lead', webhookLimiter, asyncHandler(async (req, res) => {
         captured_at: new Date().toISOString(),
     };
 
-    const leadsLogPath = path.join('logs', 'captured_leads.jsonl');
-    fs.mkdirSync('logs', { recursive: true });
-    fs.appendFileSync(leadsLogPath, JSON.stringify(lead) + '\n');
+    storage.appendJsonl('captured_leads.jsonl', lead);
 
     logger.info('New lead captured', { name, email });
     n8nService.notifyNewLead(lead);
@@ -243,14 +228,7 @@ router.get('/api/leads', asyncHandler(async (req, res) => {
         return res.json({ leads: [] });
     }
 
-    const leads = [];
-    await new Promise((resolve, reject) => {
-        fs.createReadStream(csvPath)
-            .pipe(csv())
-            .on('data', (row) => leads.push(row))
-            .on('end', resolve)
-            .on('error', reject);
-    });
+    const leads = await storage.readCsv(csvPath);
 
     res.json({ leads });
 }));
@@ -259,16 +237,7 @@ router.get('/api/leads', asyncHandler(async (req, res) => {
 router.get('/api/stats', asyncHandler(async (req, res) => {
     const csvPath = path.join(__dirname, '..', 'data', 'submissions.csv');
 
-    let leads = [];
-    if (fs.existsSync(csvPath)) {
-        await new Promise((resolve, reject) => {
-            fs.createReadStream(csvPath)
-                .pipe(csv())
-                .on('data', (row) => leads.push(row))
-                .on('end', resolve)
-                .on('error', reject);
-        });
-    }
+    const leads = await storage.readCsv(csvPath);
 
     const totalLeads = leads.length;
     const conversions = leads.filter(l => l.status === 'converted').length;
@@ -311,21 +280,15 @@ router.get('/api/stats', asyncHandler(async (req, res) => {
 }));
 
 // GET /api/leads/captured — legacy CSV endpoint
-router.get('/api/leads/captured', (req, res) => {
+router.get('/api/leads/captured', asyncHandler(async (req, res) => {
     try {
         const csvPath = path.join(__dirname, '..', 'data', 'submissions.csv');
-        if (!fs.existsSync(csvPath)) return res.json({ leads: [] });
-
-        const leads = [];
-        fs.createReadStream(csvPath)
-            .pipe(csv())
-            .on('data', (row) => leads.push(row))
-            .on('end', () => res.json({ leads }))
-            .on('error', () => res.status(500).json({ error: 'Failed to parse CSV' }));
+        const leads = await storage.readCsv(csvPath);
+        res.json({ leads });
     } catch (err) {
         res.status(500).json({ error: 'Failed to read leads' });
     }
-});
+}));
 
 // ════════════════════════════════════════════════════════════════════════════
 // ADMIN DASHBOARD API ENDPOINTS (all require auth)
@@ -733,28 +696,15 @@ router.post('/api/run-single', apiKeyAuth, pipelineRunLimiter, async (req, res) 
     if (!businessName) return res.status(400).json({ error: 'businessName is required' });
 
     const jobId = `single-${Date.now()}`;
-    const dataDir = path.join('data', jobId);
-    fs.mkdirSync(dataDir, { recursive: true });
-    fs.mkdirSync('logs', { recursive: true });
+    const { relativeDir, files } = storage.createJobDirectory(jobId);
+    const dataDir = relativeDir;
 
     const normalizedWebsite = website ? (website.startsWith('http') ? website : `https://${website}`) : '';
     const leadsPath = path.join(dataDir, 'leads.csv');
-    fs.writeFileSync(leadsPath,
+    storage.writeTextFile(leadsPath,
         `name,phone,website,city,address,rating,reviews,business_name\n` +
         `"${businessName}","${phone}","${normalizedWebsite}","${city}","","","","${businessName}"\n`
     );
-
-    const files = {
-        leads: leadsPath,
-        audited: path.join(dataDir, 'audited_leads.csv'),
-        socialAudited: path.join(dataDir, 'social_audited.csv'),
-        enriched: path.join(dataDir, 'enriched_leads.csv'),
-        outreach: path.join(dataDir, 'outreach_messages.csv'),
-        demos: path.join('public', 'demos', jobId),
-        demo: path.join(dataDir, 'demo_leads.csv'),
-        emailLog: path.join('logs', `email_log_${jobId}.csv`),
-        callLog: path.join('logs', `call_log_${jobId}.csv`),
-    };
 
     const job = {
         status: 'running',
