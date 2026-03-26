@@ -1,9 +1,9 @@
 /**
- * Dashboard Server
- * ================
- * Express web server that powers the lead generation dashboard.
- * Provides a form UI, runs the pipeline steps as child processes,
- * streams real-time progress via SSE, and exports to Google Sheets.
+ * SmokeShopGrowth Server
+ * ======================
+ * Express web server — serves the public marketing site at /,
+ * the internal lead-gen dashboard at /dashboard, and all API +
+ * webhook routes for the pipeline, voice agent, and Stripe.
  *
  * Start:  node server.js
  * Open:   http://localhost:3000
@@ -25,18 +25,34 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
+
+const webhookLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 50,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many requests, please try again later.' },
+});
+
+// Dashboard route — serves the internal tool at /dashboard
+app.get('/dashboard', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
+// Health check
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Serve static files (public/index.html = marketing landing page)
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ──────────────────────────────────────────────
 // Health check (no auth required)
-// ──────────────────────────────────────────────
 app.get('/api/ping', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// ──────────────────────────────────────────────
 // Mount modular routers
-// ──────────────────────────────────────────────
 const apiRouter = require('./routes/api');
 const webhookRouter = require('./routes/webhooks');
 
@@ -47,14 +63,6 @@ app.use(webhookRouter);
 // Template Form Submission Endpoint
 // ──────────────────────────────────────────────
 const templateSubmissions = [];
-
-const webhookLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 50,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: 'Too many requests, please try again later.' },
-});
 
 app.post('/api/template-submission', webhookLimiter, async (req, res) => {
     try {
@@ -101,7 +109,9 @@ app.use(errorHandler);
 // Start server
 if (require.main === module) {
     app.listen(PORT, () => {
-        console.log(`\nDashboard running at http://localhost:${PORT}\n`);
+        console.log(`\n🚀 SmokeShopGrowth running at http://localhost:${PORT}`);
+        console.log(`   Landing page: http://localhost:${PORT}/`);
+        console.log(`   Dashboard:    http://localhost:${PORT}/dashboard\n`);
     });
 }
 

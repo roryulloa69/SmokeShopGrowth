@@ -6,4 +6,3 @@ buildCommand = "npm install"
 startCommand = "node server.js"
 healthcheckPath = "/health"
 restartPolicyType = "on_failure"
-replicaCount = 1
