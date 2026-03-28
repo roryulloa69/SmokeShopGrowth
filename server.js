@@ -112,6 +112,9 @@ if (require.main === module) {
         console.log(`\n🚀 SmokeShopGrowth running at http://localhost:${PORT}`);
         console.log(`   Landing page: http://localhost:${PORT}/`);
         console.log(`   Dashboard:    http://localhost:${PORT}/dashboard\n`);
+        
+        // Start background automation chron tasks
+        require('./src/node/cron').start();
     });
 }
 

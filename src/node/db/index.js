@@ -30,6 +30,10 @@ db.exec(`
     issues         TEXT DEFAULT '',
     status         TEXT DEFAULT 'scraped'
                    CHECK(status IN ('scraped','audited','contacted','called','paid','rejected')),
+    crm_stage      TEXT DEFAULT 'new_lead',
+    followup_step  INTEGER DEFAULT 0,
+    demo_url       TEXT DEFAULT '',
+    notes          TEXT DEFAULT '',
     audit_summary  TEXT DEFAULT '',
     ssl            TEXT DEFAULT '',
     load_time      TEXT DEFAULT '',
@@ -114,18 +118,42 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_recipients_lead ON campaign_recipients(lead_id);
   CREATE INDEX IF NOT EXISTS idx_call_log_outcome ON call_log(outcome);
   CREATE INDEX IF NOT EXISTS idx_payments_city ON payments(city);
+
+  CREATE TABLE IF NOT EXISTS interactions (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    lead_id       TEXT NOT NULL,
+    type          TEXT DEFAULT 'system' CHECK(type IN ('call','email','sms','system')),
+    content       TEXT DEFAULT '',
+    created_at    TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (lead_id) REFERENCES leads(place_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_interactions_lead_id ON interactions(lead_id);
 `);
+
+try {
+  db.exec("ALTER TABLE leads ADD COLUMN crm_stage TEXT DEFAULT 'new_lead'");
+  db.exec("ALTER TABLE leads ADD COLUMN followup_step INTEGER DEFAULT 0");
+  db.exec("ALTER TABLE leads ADD COLUMN demo_url TEXT DEFAULT ''");
+  db.exec("ALTER TABLE leads ADD COLUMN notes TEXT DEFAULT ''");
+
+  db.exec("UPDATE leads SET crm_stage = 'closed_won' WHERE status = 'paid'");
+  db.exec("UPDATE leads SET crm_stage = 'do_not_contact' WHERE status = 'rejected'");
+  db.exec("UPDATE leads SET crm_stage = 'called' WHERE status = 'called'");
+  db.exec("UPDATE leads SET crm_stage = 'email_captured' WHERE email != '' AND status NOT IN ('paid', 'rejected') AND crm_stage = 'new_lead'");
+} catch(e) {
+  // Ignore if columns already exist
+}
 
 // ── Prepared statements ─────────────────────────
 
-const upsertLead = db.prepare(`
+const upsertLeadStmt = db.prepare(`
   INSERT INTO leads (place_id, business_name, address, phone, email, website,
                      rating, review_count, google_maps_url, image_url, city_slug,
-                     score, issues, status, audit_summary, ssl, load_time,
+                     score, issues, status, crm_stage, followup_step, demo_url, notes, audit_summary, ssl, load_time,
                      mobile_friendly, website_status, instagram, facebook, has_website)
   VALUES (@place_id, @business_name, @address, @phone, @email, @website,
           @rating, @review_count, @google_maps_url, @image_url, @city_slug,
-          @score, @issues, @status, @audit_summary, @ssl, @load_time,
+          @score, @issues, @status, @crm_stage, @followup_step, @demo_url, @notes, @audit_summary, @ssl, @load_time,
           @mobile_friendly, @website_status, @instagram, @facebook, @has_website)
   ON CONFLICT(place_id) DO UPDATE SET
     business_name = excluded.business_name,
@@ -138,6 +166,10 @@ const upsertLead = db.prepare(`
     score = excluded.score,
     issues = excluded.issues,
     status = excluded.status,
+    crm_stage = excluded.crm_stage,
+    followup_step = excluded.followup_step,
+    demo_url = CASE WHEN excluded.demo_url != '' THEN excluded.demo_url ELSE leads.demo_url END,
+    notes = CASE WHEN excluded.notes != '' THEN excluded.notes ELSE leads.notes END,
     audit_summary = CASE WHEN excluded.audit_summary != '' THEN excluded.audit_summary ELSE leads.audit_summary END,
     ssl = CASE WHEN excluded.ssl != '' THEN excluded.ssl ELSE leads.ssl END,
     load_time = CASE WHEN excluded.load_time != '' THEN excluded.load_time ELSE leads.load_time END,
@@ -149,6 +181,17 @@ const upsertLead = db.prepare(`
     updated_at = datetime('now')
 `);
 
+const upsertLead = {
+  run: (l) => {
+    l.crm_stage = l.crm_stage || 'new_lead';
+    l.followup_step = l.followup_step || 0;
+    l.demo_url = l.demo_url || '';
+    l.notes = l.notes || '';
+    l.status = l.status || 'scraped';
+    return upsertLeadStmt.run(l);
+  }
+};
+
 const upsertLeadMany = db.transaction((leads) => {
     for (const lead of leads) upsertLead.run(lead);
 });
@@ -157,8 +200,11 @@ const getLeadByPlaceId = db.prepare('SELECT * FROM leads WHERE place_id = ?');
 const getLeadsByCity = db.prepare('SELECT * FROM leads WHERE city_slug = ? ORDER BY score DESC');
 const getLeadsByStatus = db.prepare('SELECT * FROM leads WHERE status = ? ORDER BY score DESC');
 const getLeadsByCityAndStatus = db.prepare('SELECT * FROM leads WHERE city_slug = ? AND status = ? ORDER BY score DESC');
-const getAllLeads = db.prepare('SELECT * FROM leads ORDER BY score DESC');
 
+const getLeadsByStage = db.prepare('SELECT * FROM leads WHERE crm_stage = ? ORDER BY score DESC');
+const getLeadsByCityAndStage = db.prepare('SELECT * FROM leads WHERE city_slug = ? AND crm_stage = ? ORDER BY score DESC');
+
+const getAllLeads = db.prepare('SELECT * FROM leads ORDER BY score DESC');
 // Paginated queries
 const getLeadsByCityPaginated = db.prepare(`
   SELECT * FROM leads 
@@ -186,7 +232,24 @@ const getLeadsByCityAndStatusPaginated = db.prepare(`
 
 const getLeadsByCityAndStatusCount = db.prepare('SELECT COUNT(*) as total FROM leads WHERE city_slug = ? AND status = ?');
 
+const getLeadsByStagePaginated = db.prepare(`
+  SELECT * FROM leads 
+  WHERE crm_stage = ? 
+  ORDER BY score DESC 
+  LIMIT ? OFFSET ?
+`);
+const getLeadsByStageCount = db.prepare('SELECT COUNT(*) as total FROM leads WHERE crm_stage = ?');
+
+const getLeadsByCityAndStagePaginated = db.prepare(`
+  SELECT * FROM leads 
+  WHERE city_slug = ? AND crm_stage = ? 
+  ORDER BY score DESC 
+  LIMIT ? OFFSET ?
+`);
+const getLeadsByCityAndStageCount = db.prepare('SELECT COUNT(*) as total FROM leads WHERE city_slug = ? AND crm_stage = ?');
+
 const updateLeadStatus = db.prepare('UPDATE leads SET status = ?, updated_at = datetime(\'now\') WHERE place_id = ?');
+const updateLeadStage = db.prepare('UPDATE leads SET crm_stage = ?, updated_at = datetime(\'now\') WHERE place_id = ?');
 const updateLeadEmail = db.prepare('UPDATE leads SET email = ?, updated_at = datetime(\'now\') WHERE place_id = ?');
 
 // Jobs
@@ -400,6 +463,12 @@ module.exports = {
     getLeadsByStatusCount,
     getLeadsByCityAndStatusPaginated,
     getLeadsByCityAndStatusCount,
+    getLeadsByStage,
+    getLeadsByCityAndStage,
+    getLeadsByStagePaginated,
+    getLeadsByStageCount,
+    getLeadsByCityAndStagePaginated,
+    getLeadsByCityAndStageCount,
     getLeadsPaginated,
     getLeadsCount,
     updateLeadStatus,

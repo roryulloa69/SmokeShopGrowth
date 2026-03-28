@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SmokeShop Growth — Pipeline CRM</title>
+  <style>
+    :root {
+      --bg: #09090b;
+      --bg-panel: rgba(255, 255, 255, 0.03);
+      --border: rgba(255, 255, 255, 0.08);
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --text-main: #f4f4f5;
+      --text-muted: #a1a1aa;
+      --red: #ef4444;
+      --green: #10b981;
+      --yellow: #f59e0b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(9, 9, 11, 0.8);
+      backdrop-filter: blur(12px);
+      z-index: 10;
+    }
+    .brand { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; }
+    .brand span { color: var(--accent); }
+    
+    .auth-bar { display: flex; gap: 12px; align-items: center; }
+    .auth-bar input {
+      background: var(--bg-panel); border: 1px solid var(--border);
+      color: white; padding: 8px 12px; border-radius: 8px; font-size: 0.85rem;
+    }
+    .auth-bar button {
+      background: var(--accent); color: white; border: none; padding: 8px 16px;
+      border-radius: 8px; font-weight: 600; cursor: pointer;
+    }
+
+    /* ── Kanban Board ── */
+    .board-wrapper {
+      flex: 1;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 24px;
+    }
+    .board {
+      display: flex;
+      gap: 16px;
+      height: 100%;
+      align-items: flex-start;
+    }
+    
+    .column {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      min-width: 300px;
+      width: 300px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    .column-header {
+      padding: 16px; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .column-title { font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+    .column-count { background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+    
+    .column-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    /* ── Cards ── */
+    .card {
+      background: #18181b;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      cursor: grab;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:active { cursor: grabbing; }
+    .card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+    
+    .card-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 6px; }
+    .card-meta { font-size: 0.75rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 4px; }
+    .card-meta span { display: flex; align-items: center; gap: 6px; }
+    .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; }
+    .badge.website { background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+    .badge.score { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; }
+    
+    /* Drag over effects */
+    .column-content.drag-over { background: rgba(99, 102, 241, 0.05); }
+
+    /* ── Drawer ── */
+    #drawer-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100;
+      opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    }
+    #drawer-overlay.active { opacity: 1; pointer-events: auto; }
+    
+    #drawer {
+      position: fixed; top: 0; right: 0; bottom: 0; width: 400px; max-width: 100vw;
+      background: #18181b; border-left: 1px solid var(--border);
+      z-index: 101; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex; flex-direction: column; box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+    }
+    #drawer.active { transform: translateX(0); }
+    
+    .drawer-header {
+      padding: 20px 24px; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: flex-start;
+    }
+    .drawer-header h2 { font-size: 1.25rem; font-weight: 700; color: #fff; margin-bottom: 4px; }
+    .drawer-close { background: transparent; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; }
+    .drawer-close:hover { color: #fff; }
+    
+    .drawer-body { padding: 24px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 24px; }
+    .data-group { display: flex; flex-direction: column; gap: 8px; }
+    .data-label { font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 0.05em; }
+    .data-val { font-size: 0.95rem; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border); word-break: break-all; }
+    
+    .timeline { border-left: 2px solid var(--border); padding-left: 20px; margin-left: 10px; display: flex; flex-direction: column; gap: 16px; margin-top: 8px; }
+    .timeline-item { position: relative; }
+    .timeline-item::before { content: ''; position: absolute; left: -25px; top: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); border: 2px solid #18181b; }
+    .tl-date { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; }
+    .tl-content { font-size: 0.85rem; color: #e4e4e7; background: rgba(255,255,255,0.02); padding: 10px; border-radius: 6px; }
+
+  </style>
+</head>
+<body>
+
+  <!-- Drawer -->
+  <div id="drawer-overlay" onclick="closeDrawer()"></div>
+  <div id="drawer">
+    <div class="drawer-header">
+      <div>
+        <h2 id="d-name">Business Name</h2>
+        <div class="badge score" style="display:inline-block;" id="d-stage">Stage</div>
+      </div>
+      <button class="drawer-close" onclick="closeDrawer()">&times;</button>
+    </div>
+    <div class="drawer-body">
+      <div class="data-group">
+        <span class="data-label">Contact Info</span>
+        <div class="data-val" id="d-contact"></div>
+      </div>
+      <div class="data-group">
+        <span class="data-label">Demo Website</span>
+        <div class="data-val" id="d-demo">Not generated yet.</div>
+      </div>
+      <div class="data-group">
+        <span class="data-label">AI Call Notes</span>
+        <div class="data-val" id="d-notes">No notes available.</div>
+      </div>
+      <div class="data-group">
+        <span class="data-label">Interaction Timeline</span>
+        <div class="timeline" id="d-timeline">
+          <!-- Timeline items inserted here -->
+          <div class="timeline-item"><div class="tl-date">System</div><div class="tl-content">Lead generated via scraper.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <header>
+    <div class="brand">SmokeShop<span>Growth</span> CRM</div>
+    <div class="auth-bar">
+      <input type="password" id="apiKey" placeholder="Admin API Key">
+      <button onclick="loadBoard()">Load Pipeline</button>
+    </div>
+  </header>
+
+  <div class="board-wrapper">
+    <div class="board" id="board">
+      <!-- Columns rendered via JS -->
+    </div>
+  </div>
+
+  <script>
+    const STAGES = [
+      { id: 'new_lead', name: 'New Leads' },
+      { id: 'queued_for_call', name: 'Waitlist (Call)' },
+      { id: 'called', name: 'Called / Voicemail' },
+      { id: 'interested', name: 'Interested' },
+      { id: 'email_captured', name: 'Email Captured' },
+      { id: 'demo_created', name: 'Demo Created' },
+      { id: 'demo_sent', name: 'Demo Sent' },
+      { id: 'followup_active', name: 'Follow-up Drip' },
+      { id: 'closed_won', name: 'Closed Won' },
+      { id: 'closed_lost', name: 'Lost' },
+      { id: 'do_not_contact', name: 'DNC' }
+    ];
+
+    let leads = [];
+
+    // Initialize board columns
+    function initBoard() {
+      const board = document.getElementById('board');
+      board.innerHTML = '';
+      STAGES.forEach(stage => {
+        const col = document.createElement('div');
+        col.className = 'column';
+        col.innerHTML = `
+          <div class="column-header">
+            <span class="column-title">${stage.name}</span>
+            <span class="column-count" id="count-${stage.id}">0</span>
+          </div>
+          <div class="column-content" id="col-${stage.id}" data-stage="${stage.id}"></div>
+        `;
+        board.appendChild(col);
+      });
+      setupDragAndDrop();
+    }
+
+    async function loadBoard() {
+      const key = document.getElementById('apiKey').value;
+      if (!key) return alert('Enter API key');
+      localStorage.setItem('crm_key', key);
+      
+      try {
+        const res = await fetch('/api/leads?limit=500', {
+          headers: { 'x-api-key': key }
+        });
+        if (!res.ok) throw new Error('Failed to load leads');
+        const data = await res.json();
+        leads = data.leads || [];
+        renderCards();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    function renderCards() {
+      // Clear columns
+      STAGES.forEach(s => {
+        document.getElementById(`col-${s.id}`).innerHTML = '';
+        document.getElementById(`count-${s.id}`).innerText = '0';
+      });
+
+      const counts = {};
+      
+      leads.forEach(lead => {
+        const stageId = lead.crm_stage || 'new_lead';
+        const col = document.getElementById(`col-${stageId}`);
+        if (!col) return; // Safely ignore unknown stages
+        
+        counts[stageId] = (counts[stageId] || 0) + 1;
+        
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.draggable = true;
+        card.dataset.id = lead.place_id;
+        card.onclick = () => openDrawer(lead);
+        
+        // Convert integer boolean to readable
+        const noWeb = (!lead.website || lead.has_website == '0') ? `<span class="badge website">No Website</span>` : '';
+        const score = `<span class="badge score">Score: ${lead.score || 0}</span>`;
+        
+        card.innerHTML = `
+          <div class="card-title">${lead.business_name}</div>
+          <div class="card-meta">
+            ${lead.phone ? `<span>📞 ${lead.phone}</span>` : ''}
+            ${lead.email ? `<span>✉️ ${lead.email}</span>` : ''}
+            <div style="margin-top: 6px; display: flex; gap: 6px;">
+              ${noWeb} ${score}
+            </div>
+          </div>
+        `;
+        
+        col.appendChild(card);
+      });
+
+      // Update counters
+      Object.entries(counts).forEach(([id, count]) => {
+        document.getElementById(`count-${id}`).innerText = count;
+      });
+    }
+
+    function setupDragAndDrop() {
+      let draggedCard = null;
+
+      document.addEventListener('dragstart', (e) => {
+        if (e.target.classList.contains('card')) {
+          draggedCard = e.target;
+          e.target.style.opacity = '0.5';
+        }
+      });
+
+      document.addEventListener('dragend', (e) => {
+        if (e.target.classList.contains('card')) {
+          e.target.style.opacity = '1';
+          draggedCard = null;
+          document.querySelectorAll('.column-content').forEach(c => c.classList.remove('drag-over'));
+        }
+      });
+
+      document.querySelectorAll('.column-content').forEach(col => {
+        col.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          col.classList.add('drag-over');
+        });
+        col.addEventListener('dragleave', () => {
+          col.classList.remove('drag-over');
+        });
+        col.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          col.classList.remove('drag-over');
+          
+          if (draggedCard) {
+            col.appendChild(draggedCard);
+            const newStage = col.dataset.stage;
+            const placeId = draggedCard.dataset.id;
+            
+            // Recompute counts visually
+            renderCounters();
+            
+            // API Call
+            try {
+              const key = localStorage.getItem('crm_key');
+              await fetch(`/api/leads/${placeId}/stage`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'x-api-key': key },
+                body: JSON.stringify({ stage: newStage })
+              });
+            } catch (err) {
+              console.error('Failed to save stage', err);
+            }
+          }
+        });
+      });
+    }
+
+    function renderCounters() {
+      STAGES.forEach(s => {
+        const col = document.getElementById(`col-${s.id}`);
+        document.getElementById(`count-${s.id}`).innerText = col.children.length;
+      });
+    }
+
+    // Drawer Logic
+    function openDrawer(lead) {
+      document.getElementById('drawer-overlay').classList.add('active');
+      document.getElementById('drawer').classList.add('active');
+      
+      document.getElementById('d-name').innerText = lead.business_name;
+      const stageObj = STAGES.find(s => s.id === (lead.crm_stage || 'new_lead'));
+      document.getElementById('d-stage').innerText = stageObj ? stageObj.name : 'Unknown';
+      
+      document.getElementById('d-contact').innerHTML = `
+        <strong>Phone:</strong> ${lead.phone || 'N/A'}<br>
+        <strong>Email:</strong> ${lead.email || 'N/A'}<br>
+        <strong>Original Site:</strong> ${lead.website || 'None'}
+      `;
+      
+      document.getElementById('d-demo').innerHTML = lead.demo_url 
+        ? `<a href="${lead.demo_url}" target="_blank" style="color:var(--accent)">${lead.demo_url}</a>`
+        : 'Not generated yet.';
+        
+      document.getElementById('d-notes').innerText = lead.notes || 'No notes available.';
+      
+      // In a real app we'd fetch interactions from the DB. Here we use a placeholder or basic lead creation time.
+      const date = new Date(lead.created_at || Date.now()).toLocaleString();
+      document.getElementById('d-timeline').innerHTML = `
+        <div class="timeline-item">
+          <div class="tl-date">${date}</div>
+          <div class="tl-content">Lead imported and scored (${lead.score}).</div>
+        </div>
+      `;
+    }
+
+    function closeDrawer() {
+      document.getElementById('drawer-overlay').classList.remove('active');
+      document.getElementById('drawer').classList.remove('active');
+    }
+
+    // Init
+    initBoard();
+    if (localStorage.getItem('crm_key')) {
+      document.getElementById('apiKey').value = localStorage.getItem('crm_key');
+      loadBoard();
+    }
+  </script>
+</body>
+</html>

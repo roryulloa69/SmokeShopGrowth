@@ -10,6 +10,7 @@ const { pushLog } = require('../services/sse');
 const storage = require('../services/storage');
 const { webhookLimiter } = require('../middleware/rate-limit');
 const { insertPayment } = require('../src/node/db');
+const db = require('../src/node/db');
 
 const PORT = process.env.PORT || 3000;
 
@@ -32,6 +33,7 @@ router.post('/webhook/call', webhookLimiter, async (req, res) => {
     }
 
     const {
+        place_id,
         business_name = '',
         phone = '',
         city = '',
@@ -40,6 +42,9 @@ router.post('/webhook/call', webhookLimiter, async (req, res) => {
 
     if (!phone) {
         return res.status(400).json({ error: 'phone is required' });
+    }
+    if (!place_id) {
+        return res.status(400).json({ error: 'place_id is required for CRM tracking' });
     }
 
     const apiKey = process.env.ELEVENLABS_API_KEY;
@@ -69,7 +74,12 @@ router.post('/webhook/call', webhookLimiter, async (req, res) => {
                 agent_id: agentId,
                 agent_phone_number_id: phoneNumberId,
                 to_number: phone,
-                dynamic_variables: { business_name, city, agent_name },
+                dynamic_variables: { 
+                    business_name, 
+                    city, 
+                    agent_name,
+                    place_id // Used to track the lead on webhook return
+                },
             }),
         });
 
@@ -111,6 +121,7 @@ router.post('/webhook/vapi', webhookLimiter, async (req, res) => {
         const phone = call?.customer?.number || '';
         const city = call?.metadata?.city || '';
         const call_id = call?.id || '';
+        const place_id = call?.metadata?.place_id || '';
         const duration = call?.endedAt && call?.startedAt
             ? Math.round((new Date(call.endedAt) - new Date(call.startedAt)) / 1000)
             : 0;
@@ -130,7 +141,45 @@ router.post('/webhook/vapi', webhookLimiter, async (req, res) => {
 
         console.log(`📞 Vapi call ended — ${business_name} (${phone}) | email: ${collected_email || 'none'} | outcome: ${outcome}`);
 
+        // Intelligent Stage Processing heuristc
+        let newStage = 'called';
+        const fullTranscript = messages.map(m => (m.message || m.content || '').toLowerCase()).join(' ');
+        const isNotInterested = /(not interested|stop calling|remove me|take me off|do not call|fuck off)/i.test(fullTranscript);
+        const isInterested = /(send it|love to see|sure|yes please|sounds good)/i.test(fullTranscript);
+
+        if (isNotInterested) {
+            newStage = 'do_not_contact';
+        } else if (collected_email) {
+            newStage = 'email_captured';
+        } else if (isInterested) {
+            newStage = 'interested';
+        }
+
+        // DB Update
+        const leadTarget = place_id || phone; // Match by place_id or fallback to phone
+        if (leadTarget) {
+            try {
+                // If we used phone as fallback, we might not have a direct helper, so just update via phone or place_id safely:
+                if (place_id) {
+                    db.updateLeadStage.run(newStage, place_id);
+                    db.logInteraction.run(place_id, 'call', `Outcome: ${outcome}. Summary: ${summary}. Emails: ${collected_email || 'None'}`);
+                } else if (phone) {
+                    // Quick inline update if no place_id
+                    const stmt = db.db.prepare(`UPDATE leads SET crm_stage = ?, email = COALESCE(NULLIF(?,''), email), notes = json_insert(COALESCE(notes, '{}'), '$.call_summary', ?) WHERE phone = ?`);
+                    stmt.run(newStage, collected_email, summary, phone);
+                }
+            } catch (dbErr) {
+                console.error('[VAPI] Failed to update lead in DB:', dbErr.message);
+            }
+        }
+
         if (collected_email && business_name) {
+            // Also save the email directly to the DB if we have placeId
+            if (place_id) {
+                try {
+                    db.db.prepare("UPDATE leads SET email = ? WHERE place_id = ?").run(collected_email, place_id);
+                } catch (e) {}
+            }
             try {
                 await fetch(`http://localhost:${PORT}/api/send-demo`, {
                     method: 'POST',
@@ -139,6 +188,7 @@ router.post('/webhook/vapi', webhookLimiter, async (req, res) => {
                         email: collected_email,
                         business_name,
                         city,
+                        place_id,
                     }),
                 });
                 console.log(`✅ Demo email auto-triggered to ${collected_email}`);

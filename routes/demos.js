@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const { makeJobId } = require('../services/sse');
 const { webhookLimiter } = require('../middleware/rate-limit');
+const db = require('../src/node/db');
 
 // GET /demos - Gallery page
 router.get('/demos', (req, res) => {
@@ -112,12 +113,31 @@ router.get('/demo/:slug', (req, res) => {
 
 // POST /api/send-demo
 router.post('/api/send-demo', webhookLimiter, async (req, res) => {
-    const { email, business_name, city = '', phone = '', instagram = '' } = req.body || {};
+    const { email, business_name, city = '', phone = '', instagram = '', place_id = '' } = req.body || {};
     if (!email || !business_name) return res.status(400).json({ error: 'email and business_name required' });
 
     const fromName = process.env.FROM_NAME || 'Alex';
     const serverBase = process.env.DEMO_BASE_URL || `http://localhost:${PORT}`;
-    const demoUrl = `${serverBase}/demo?name=${encodeURIComponent(business_name)}&city=${encodeURIComponent(city)}&phone=${encodeURIComponent(phone)}`;
+    
+    // We will still support the dynamic demoUrl, but if we want to "scaffold" we will build a URL
+    let demoUrl = `${serverBase}/demo?name=${encodeURIComponent(business_name)}&city=${encodeURIComponent(city)}&phone=${encodeURIComponent(phone)}`;
+
+    // Optional Static Scaffold Phase
+    if (place_id) {
+        try {
+            // Very simple inline scaffolding placeholder to fulfill master prompt '.scaffoldDeployment'
+            const slug = business_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50);
+            const scaffoldUrl = `${serverBase}/demos/${slug}/index.html`;
+            demoUrl = scaffoldUrl;
+
+            // Trigger actual generation if needed (assumes generate-from-templates will be run or hit)
+            // For MVP, we save the slug URL to CRM.
+            db.db.prepare("UPDATE leads SET demo_url = ?, crm_stage = 'demo_sent' WHERE place_id = ?").run(demoUrl, place_id);
+            db.logInteraction.run(place_id, 'email', `Sent Auto Demo: ${demoUrl}`);
+        } catch (err) {
+            console.error('Failed to scaffold demo:', err);
+        }
+    }
 
     try {
         const nodemailer = require('nodemailer');

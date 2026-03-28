@@ -180,6 +180,7 @@ router.get('/api/leads', asyncHandler(async (req, res) => {
             const limit = Math.min(parseInt(req.query.limit) || 25, 100);
             const offset = (page - 1) * limit;
             const status = req.query.status || null;
+            const stage = req.query.stage || null;
             const cityFilter = req.query.city || null;
             const search = req.query.search || null;
 
@@ -189,6 +190,14 @@ router.get('/api/leads', asyncHandler(async (req, res) => {
                 const searchPattern = `%${search}%`;
                 leads = db.searchLeads.all(searchPattern, searchPattern, searchPattern);
                 total = leads.length;
+            } else if (stage && cityFilter) {
+                const countResult = db.getLeadsByCityAndStageCount.get(cityFilter, stage);
+                total = countResult.total;
+                leads = db.getLeadsByCityAndStagePaginated.all(cityFilter, stage, limit, offset);
+            } else if (stage) {
+                const countResult = db.getLeadsByStageCount.get(stage);
+                total = countResult.total;
+                leads = db.getLeadsByStagePaginated.all(stage, limit, offset);
             } else if (status && cityFilter) {
                 const countResult = db.getLeadsByCityAndStatusCount.get(cityFilter, status);
                 total = countResult.total;
@@ -231,6 +240,30 @@ router.get('/api/leads', asyncHandler(async (req, res) => {
     const leads = await storage.readCsv(csvPath);
 
     res.json({ leads });
+}));
+
+// PATCH /api/leads/:place_id/stage — Update CRM stage
+router.patch('/api/leads/:place_id/stage', asyncHandler(async (req, res) => {
+    // Basic API Key check
+    const apiKey = req.headers['x-api-key'] || req.query.key;
+    if (apiKey !== config.API_KEY) {
+        return res.status(401).json({ error: 'Unauthorized. Invalid API Key.' });
+    }
+
+    const { place_id } = req.params;
+    const { stage } = req.body;
+
+    if (!stage) {
+        return res.status(400).json({ error: 'stage is required' });
+    }
+
+    try {
+        db.updateLeadStage.run(stage, place_id);
+        res.json({ ok: true, place_id, stage });
+    } catch (err) {
+        console.error('[API] Error updating lead stage:', err);
+        res.status(500).json({ error: 'Failed to update lead stage' });
+    }
 }));
 
 // GET /api/stats — get dashboard statistics
