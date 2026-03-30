@@ -32,7 +32,7 @@ const webhookLimiter = rateLimit({
 });
 
 const PORT = process.env.WEBHOOK_PORT || 3001;
-const ZAPIER_WEBHOOK_URL = process.env.ZAPIER_WEBHOOK_URL;
+const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 const SHEET_TAB_NAME = "Call Logs";
 
@@ -104,24 +104,22 @@ function logCall(data) {
     fs.appendFileSync(CALLS_LOG, line + "\n");
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ZAPIER NOTIFICATION
+// ────────────────────────────────────────────────────────────────────────────// ── N8N NOTIFICATION
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function notifyZapier(payload) {
-    if (!ZAPIER_WEBHOOK_URL) {
-        console.log("⚠️  ZAPIER_WEBHOOK_URL not set — skipping Zapier notification");
+async function notifyN8n(payload) {
+    if (!N8N_WEBHOOK_URL) {
+        console.log("⚠️  N8N_WEBHOOK_URL not set — skipping n8n notification");
         return;
     }
 
     try {
-        await axios.post(ZAPIER_WEBHOOK_URL, payload);
-        console.log(`📤 Sent to Zapier: ${payload.outcome} — ${payload.business_name}`);
+        await axios.post(N8N_WEBHOOK_URL, payload);
+        console.log(`📤 Sent to n8n: ${payload.outcome} — ${payload.business_name}`);
     } catch (err) {
-        console.error("❌ Zapier notification failed:", err.message);
+        console.error("❌ n8n notification failed:", err.message);
     }
 }
-
 // ─────────────────────────────────────────────────────────────────────────────
 // VAPI WEBHOOK HANDLER
 // ─────────────────────────────────────────────────────────────────────────────
@@ -233,9 +231,9 @@ app.post("/vapi/webhook", webhookLimiter, async (req, res) => {
               .catch(err => console.error("❌ CRM webhook failed:", err.message));
         }
 
-        // Send to Zapier + log to Google Sheets + trigger follow-up (in parallel)
+        // Send to n8n + log to Google Sheets + trigger follow-up (in parallel)
         await Promise.all([
-            notifyZapier(payload),
+            notifyN8n(payload),
             appendToSheet(payload),
             sendFollowUp(payload).catch(err =>
                 console.error("❌ Follow-up failed:", err.message)
@@ -302,9 +300,9 @@ app.get("/health", (req, res) => {
 app.listen(PORT, () => {
     console.log(`🎯 Vapi webhook listening on port ${PORT}`);
     console.log(`   POST http://localhost:${PORT}/vapi/webhook`);
-    if (!ZAPIER_WEBHOOK_URL) {
+    if (!N8N_WEBHOOK_URL) {
         console.log(
-            "⚠️  ZAPIER_WEBHOOK_URL not configured — set it in .env to enable Zapier"
+            "⚠️  N8N_WEBHOOK_URL not configured — set it in .env to enable n8n"
         );
     }
 });

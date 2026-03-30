@@ -87,7 +87,7 @@ describe('Server Routes', () => {
         const res = await post('/api/run', {}, { auth: true });
         assert.strictEqual(res.status, 400);
         const data = JSON.parse(res.body);
-        assert.ok(data.error.includes('City'));
+        assert.ok(data.error.includes('required'));
     });
 
     it('GET /demo returns HTML', async () => {
@@ -114,6 +114,17 @@ describe('Server Routes', () => {
         const data = JSON.parse(res.body);
         assert.ok(data.leads !== undefined);
     });
+
+    it('GET /demos without auth returns 301', async () => {
+        const res = await get('/demos');
+        assert.strictEqual(res.status, 301);
+    });
+
+    it('GET /api/social/buffer-profiles without auth returns 401', async () => {
+        const res = await get('/api/social/buffer-profiles');
+        assert.strictEqual(res.status, 401);
+    });
+
 });
 
 describe('Pipeline', () => {

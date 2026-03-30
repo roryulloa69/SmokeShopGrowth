@@ -65,7 +65,7 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, 'public'), {
     maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0,
 }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'frontend', 'dist')));
 app.use('/demos', express.static(path.join(__dirname, 'public/demos')));
 
 const deployPath = path.join(__dirname, 'deployments');
@@ -77,7 +77,7 @@ app.use(express.static(path.join(__dirname, 'template')));
 
 // Root route
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, 'frontend', 'dist', 'index.html'));
 });
 
 // Health check

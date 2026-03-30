@@ -58,9 +58,11 @@ Return ONLY the JSON array, no markdown, no explanation.`;
     }
 });
 
+const { apiKeyAuth } = require('../middleware/auth');
+
 // GET /api/social/buffer-profiles
 // Lists Buffer profiles connected to the account
-router.get('/api/social/buffer-profiles', async (req, res) => {
+router.get('/api/social/buffer-profiles', apiKeyAuth, async (req, res) => {
     const token = process.env.BUFFER_ACCESS_TOKEN;
     if (!token) return res.status(500).json({ error: 'BUFFER_ACCESS_TOKEN not set in .env' });
 
