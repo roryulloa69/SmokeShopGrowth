@@ -25,6 +25,7 @@ RUN npm ci --omit=dev
 
 # Copy Python requirements and install
 COPY requirements.txt .
+COPY python-requirements.txt .
 RUN pip install --no-cache-dir --break-system-packages -r requirements.txt
 
 # Install Playwright browser binaries
@@ -40,8 +41,8 @@ RUN mkdir -p /app/logs /app/data /app/deployments
 EXPOSE 3000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 3000) + '/api/ping', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})" || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 3000) + '/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})" || exit 1
 
 # Start the server
 CMD ["node", "server.js"]

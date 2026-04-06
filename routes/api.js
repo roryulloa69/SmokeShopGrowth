@@ -4,6 +4,7 @@ const router = require('express').Router();
 const path = require('path');
 const fs = require('fs');
 const csv = require('csv-parser');
+const storage = require('../services/storage');
 const n8nService = require('../src/node/n8n_service');
 const { jobs, makeJobId, pushLog, broadcast } = require('../services/sse');
 const { runPipeline } = require('../services/pipeline');
@@ -13,7 +14,6 @@ const db = require('../src/node/db');
 const { createLogger } = require('../utils/logger');
 const { asyncHandler, NotFoundError, ValidationError } = require('../utils/errors');
 const { validate, schemas } = require('../utils/validation');
-const { redactEmail } = require('../utils/redact');
 
 const logger = createLogger('API');
 
@@ -34,22 +34,8 @@ router.post('/api/run', pipelineRunLimiter, apiKeyAuth, asyncHandler(async (req,
 
     const jobId = makeJobId();
     const citySlug = city.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    const dataDir = path.join('data', citySlug);
-
-    fs.mkdirSync(dataDir, { recursive: true });
-    fs.mkdirSync('logs', { recursive: true });
-
-    const files = {
-        leads: path.join(dataDir, 'leads.csv'),
-        audited: path.join(dataDir, 'audited_leads.csv'),
-        socialAudited: path.join(dataDir, 'social_audited.csv'),
-        enriched: path.join(dataDir, 'enriched_leads.csv'),
-        outreach: path.join(dataDir, 'outreach_messages.csv'),
-        demos: path.join('public', 'demos', citySlug),
-        demo: path.join(dataDir, 'demo_leads.csv'),
-        emailLog: path.join('logs', 'email_log.csv'),
-        callLog: path.join('logs', 'call_log.csv'),
-    };
+    const { relativeDir, files } = storage.createJobDirectory(citySlug);
+    const dataDir = relativeDir;
 
     // Persist job to DB
     try {
@@ -80,6 +66,7 @@ router.post('/api/run', pipelineRunLimiter, apiKeyAuth, asyncHandler(async (req,
         if (job) {
             const errorDetails = `${err.message}\n${err.stack || ''}`;
             logger.error('Pipeline failed', { jobId, error: err.message });
+            console.error('[PIPELINE ERROR]', err.stack || err);
             pushLog(jobId, `[ERROR] ${errorDetails}`, 'error');
             job.status = 'failed';
             job.error = err.message;
@@ -103,7 +90,7 @@ router.get('/api/status/:jobId', (req, res) => {
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
 
-    // Send existing logs
+    // Replay existing logs
     job.logs.forEach(entry => {
         res.write(`data: ${JSON.stringify(entry)}\n\n`);
     });
@@ -117,8 +104,6 @@ router.get('/api/status/:jobId', (req, res) => {
 
     // Add client to listeners
     job.clients.push(res);
-
-    // Cleanup on close
     req.on('close', () => {
         job.clients = job.clients.filter(c => c !== res);
     });
@@ -148,7 +133,7 @@ router.get('/api/download/:jobId/:file', asyncHandler(async (req, res) => {
 }));
 
 // GET /api/jobs — list finished jobs
-router.get('/api/jobs', apiKeyAuth, (req, res) => {
+router.get('/api/jobs', (req, res) => {
     const list = [];
     for (const [id, job] of jobs.entries()) {
         list.push({
@@ -178,49 +163,96 @@ router.post('/api/lead', webhookLimiter, asyncHandler(async (req, res) => {
         captured_at: new Date().toISOString(),
     };
 
-    const leadsLogPath = path.join('logs', 'captured_leads.jsonl');
-    fs.mkdirSync('logs', { recursive: true });
-    fs.appendFileSync(leadsLogPath, JSON.stringify(lead) + '\n');
+    storage.appendJsonl('captured_leads.jsonl', lead);
 
-    logger.info('New lead captured', { name, email: redactEmail(email) });
-    n8nService.notifyLeadCapture(lead);
+    logger.info('New lead captured', { name, email });
+    n8nService.notifyNewLead(lead);
 
     res.json({ ok: true, lead });
+}));
+
+// GET /api/leads — list captured leads (from CSV)
+router.get('/api/leads', asyncHandler(async (req, res) => {
+    // If auth header present, use DB-backed paginated endpoint
+    if (req.headers['x-api-key']) {
+        try {
+            const page = Math.max(1, parseInt(req.query.page) || 1);
+            const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 25), 100);
+            const offset = (page - 1) * limit;
+            const status = req.query.status ? String(req.query.status).slice(0, 50) : null;
+            const cityFilter = req.query.city ? String(req.query.city).slice(0, 100) : null;
+            const search = req.query.search ? String(req.query.search).slice(0, 200) : null;
+
+            let leads, total;
+
+            if (search) {
+                const searchPattern = `%${search}%`;
+                leads = db.searchLeads.all(searchPattern, searchPattern, searchPattern);
+                total = leads.length;
+            } else if (status && cityFilter) {
+                const countResult = db.getLeadsByCityAndStatusCount.get(cityFilter, status);
+                total = countResult.total;
+                leads = db.getLeadsByCityAndStatusPaginated.all(cityFilter, status, limit, offset);
+            } else if (status) {
+                const countResult = db.getLeadsByStatusCount.get(status);
+                total = countResult.total;
+                leads = db.getLeadsByStatusPaginated.all(status, limit, offset);
+            } else if (cityFilter) {
+                const countResult = db.getLeadsByCityCount.get(cityFilter);
+                total = countResult.total;
+                leads = db.getLeadsByCityPaginated.all(cityFilter, limit, offset);
+            } else {
+                const countResult = db.getLeadsCount.get();
+                total = countResult.total;
+                leads = db.getLeadsPaginated.all(limit, offset);
+            }
+
+            return res.json({
+                leads,
+                pagination: {
+                    page,
+                    limit,
+                    total,
+                    totalPages: Math.ceil(total / limit),
+                },
+            });
+        } catch (err) {
+            console.error('[API] Leads list error:', err);
+            return res.status(500).json({ error: 'Failed to fetch leads' });
+        }
+    }
+
+    // Fallback: read from submissions CSV
+    const csvPath = path.join(__dirname, '..', 'data', 'submissions.csv');
+    if (!fs.existsSync(csvPath)) {
+        return res.json({ leads: [] });
+    }
+
+    const leads = await storage.readCsv(csvPath);
+
+    res.json({ leads });
 }));
 
 // GET /api/stats — get dashboard statistics
 router.get('/api/stats', asyncHandler(async (req, res) => {
     const csvPath = path.join(__dirname, '..', 'data', 'submissions.csv');
 
-    let leads = [];
-    if (fs.existsSync(csvPath)) {
-        await new Promise((resolve, reject) => {
-            fs.createReadStream(csvPath)
-                .pipe(csv())
-                .on('data', (row) => leads.push(row))
-                .on('end', resolve)
-                .on('error', reject);
-        });
-    }
+    const leads = await storage.readCsv(csvPath);
 
-    // Calculate statistics
     const totalLeads = leads.length;
     const conversions = leads.filter(l => l.status === 'converted').length;
     const conversionRate = totalLeads > 0 ? (conversions / totalLeads * 100).toFixed(1) : 0;
 
-    // Calculate revenue
     const tierPrices = { starter: 99, growth: 299, pro: 499 };
     const revenue = leads
         .filter(l => l.tier && l.status === 'converted')
         .reduce((sum, l) => sum + (tierPrices[l.tier?.toLowerCase()] || 0), 0);
 
-    // Calculate lead scores
     const scores = leads.filter(l => l.score).map(l => parseInt(l.score) || 0);
     const avgScore = scores.length > 0
         ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
         : 0;
 
-    // Weekly breakdown
     const now = new Date();
     const weeklyData = [0, 0, 0, 0];
     leads.forEach(l => {
@@ -229,7 +261,6 @@ router.get('/api/stats', asyncHandler(async (req, res) => {
         weeklyData[3 - week]++;
     });
 
-    // Source breakdown
     const sources = { 'Google Maps': 0, 'Website Form': 0, 'Referral': 0, 'Social': 0 };
     leads.forEach(l => {
         const source = l.source || 'Website Form';
@@ -248,162 +279,71 @@ router.get('/api/stats', asyncHandler(async (req, res) => {
     });
 }));
 
-// GET /api/leads/captured — list captured leads (legacy CSV endpoint)
-router.get('/api/leads/captured', (req, res) => {
+// GET /api/leads/captured — legacy CSV endpoint
+router.get('/api/leads/captured', asyncHandler(async (req, res) => {
     try {
         const csvPath = path.join(__dirname, '..', 'data', 'submissions.csv');
-        if (!fs.existsSync(csvPath)) return res.json({ leads: [] });
-
-        const leads = [];
-        fs.createReadStream(csvPath)
-            .pipe(csv())
-            .on('data', (row) => leads.push(row))
-            .on('end', () => res.json({ leads }))
-            .on('error', (err) => res.status(500).json({ error: 'Failed to parse CSV' }));
+        const leads = await storage.readCsv(csvPath);
+        res.json({ leads });
     } catch (err) {
         res.status(500).json({ error: 'Failed to read leads' });
     }
-});
+}));
 
 // ════════════════════════════════════════════════════════════════════════════
-// ADMIN DASHBOARD API ENDPOINTS
+// ADMIN DASHBOARD API ENDPOINTS (all require auth)
 // ════════════════════════════════════════════════════════════════════════════
 
 // GET /api/dashboard/stats — dashboard overview stats
-router.get('/api/dashboard/stats', apiKeyAuth, (req, res) => {
-    try {
-        const stats = db.getDashboardStats.get();
-        res.json(stats);
-    } catch (err) {
-        logger.error('Dashboard stats error', err);
-        res.status(500).json({ error: 'Failed to fetch dashboard stats' });
-    }
-});
+router.get('/api/dashboard/stats', apiKeyAuth, asyncHandler(async (req, res) => {
+    const stats = db.getDashboardStats.get();
+    res.json(stats);
+}));
 
 // ── LEADS CRM ───────────────────────────────────────────────────────────────
 
-// GET /api/leads — list all leads with pagination and filters
-router.get('/api/leads', apiKeyAuth, (req, res) => {
-    try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = Math.min(parseInt(req.query.limit) || 25, 100);
-        const offset = (page - 1) * limit;
-        const status = req.query.status || null;
-        const city = req.query.city || null;
-        const search = req.query.search || null;
-
-        let leads, total;
-
-        if (search) {
-            const searchPattern = `%${search}%`;
-            leads = db.searchLeads.all(searchPattern, searchPattern, searchPattern);
-            total = leads.length;
-        } else if (status && city) {
-            leads = db.getLeadsByCityAndStatus.all(city, status);
-            total = leads.length;
-            leads = leads.slice(offset, offset + limit);
-        } else if (status) {
-            const countResult = db.getLeadsByStatusCount.get(status);
-            total = countResult.total;
-            leads = db.getLeadsByStatusPaginated.all(status, limit, offset);
-        } else if (city) {
-            const countResult = db.getLeadsByCityCount.get(city);
-            total = countResult.total;
-            leads = db.getLeadsByCityPaginated.all(city, limit, offset);
-        } else {
-            const countResult = db.getLeadsCount.get();
-            total = countResult.total;
-            leads = db.getLeadsPaginated.all(limit, offset);
-        }
-
-        res.json({
-            leads,
-            pagination: {
-                page,
-                limit,
-                total,
-                totalPages: Math.ceil(total / limit),
-            },
-        });
-    } catch (err) {
-        logger.error('Leads list error', err);
-        res.status(500).json({ error: 'Failed to fetch leads' });
-    }
-});
-
-// GET /api/leads/export/csv — export leads to CSV
-router.get('/api/leads/export/csv', apiKeyAuth, (req, res) => {
-    try {
-        const leads = db.getAllLeads.all();
-        const headers = ['place_id', 'business_name', 'address', 'phone', 'email', 'website', 'rating', 'review_count', 'city_slug', 'score', 'status', 'created_at'];
-        const csvRows = [headers.join(',')];
-
-        for (const lead of leads) {
-            const row = headers.map(h => {
-                const val = lead[h] || '';
-                return `"${String(val).replace(/"/g, '""')}"`;
-            });
-            csvRows.push(row.join(','));
-        }
-
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', 'attachment; filename=leads_export.csv');
-        res.send(csvRows.join('\n'));
-    } catch (err) {
-        logger.error('CSV export error', err);
-        res.status(500).json({ error: 'Failed to export leads' });
-    }
-});
-
 // GET /api/leads/:placeId — get single lead
-router.get('/api/leads/:placeId', apiKeyAuth, (req, res) => {
-    try {
-        const lead = db.getLeadByPlaceId.get(req.params.placeId);
-        if (!lead) return res.status(404).json({ error: 'Lead not found' });
-        res.json(lead);
-    } catch (err) {
-        logger.error('Lead get error', err);
-        res.status(500).json({ error: 'Failed to fetch lead' });
-    }
-});
+router.get('/api/leads/:placeId', apiKeyAuth, asyncHandler(async (req, res) => {
+    const lead = db.getLeadByPlaceId.get(req.params.placeId);
+    if (!lead) throw new NotFoundError('Lead');
+    res.json(lead);
+}));
 
 // PUT /api/leads/:placeId — update lead
-router.put('/api/leads/:placeId', apiKeyAuth, (req, res) => {
-    try {
-        const existing = db.getLeadByPlaceId.get(req.params.placeId);
-        if (!existing) return res.status(404).json({ error: 'Lead not found' });
+router.put('/api/leads/:placeId', apiKeyAuth, asyncHandler(async (req, res) => {
+    const existing = db.getLeadByPlaceId.get(req.params.placeId);
+    if (!existing) throw new NotFoundError('Lead');
 
-        const { business_name, email, phone, status, score } = req.body;
-        db.updateLead.run({
-            place_id: req.params.placeId,
-            business_name: business_name ?? existing.business_name,
-            email: email ?? existing.email,
-            phone: phone ?? existing.phone,
-            status: status ?? existing.status,
-            score: score ?? existing.score,
-        });
+    const { business_name, email, phone, status, score } = req.body;
 
-        const updated = db.getLeadByPlaceId.get(req.params.placeId);
-        res.json(updated);
-    } catch (err) {
-        logger.error('Lead update error', err);
-        res.status(500).json({ error: 'Failed to update lead' });
+    const VALID_STATUSES = ['scraped', 'audited', 'contacted', 'called', 'paid', 'rejected'];
+    if (status && !VALID_STATUSES.includes(status)) {
+        throw new ValidationError(`Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`);
     }
-});
+    const parsedScore = score !== undefined ? parseInt(score, 10) : existing.score;
+    if (score !== undefined && (isNaN(parsedScore) || parsedScore < 0 || parsedScore > 100)) {
+        throw new ValidationError('score must be an integer between 0 and 100');
+    }
+
+    db.updateLead.run({
+        place_id: req.params.placeId,
+        business_name: business_name ?? existing.business_name,
+        email: email ?? existing.email,
+        phone: phone ?? existing.phone,
+        status: status ?? existing.status,
+        score: parsedScore,
+    });
+
+    res.json(db.getLeadByPlaceId.get(req.params.placeId));
+}));
 
 // DELETE /api/leads/:placeId — delete lead
-router.delete('/api/leads/:placeId', apiKeyAuth, (req, res) => {
-    try {
-        const existing = db.getLeadByPlaceId.get(req.params.placeId);
-        if (!existing) return res.status(404).json({ error: 'Lead not found' });
-
-        db.deleteLead.run(req.params.placeId);
-        res.json({ ok: true });
-    } catch (err) {
-        logger.error('Lead delete error', err);
-        res.status(500).json({ error: 'Failed to delete lead' });
-    }
-});
+router.delete('/api/leads/:placeId', apiKeyAuth, asyncHandler(async (req, res) => {
+    const existing = db.getLeadByPlaceId.get(req.params.placeId);
+    if (!existing) throw new NotFoundError('Lead');
+    db.deleteLead.run(req.params.placeId);
+    res.json({ ok: true });
+}));
 
 // POST /api/leads/bulk — bulk actions on leads
 router.post('/api/leads/bulk', apiKeyAuth, (req, res) => {
@@ -430,8 +370,32 @@ router.post('/api/leads/bulk', apiKeyAuth, (req, res) => {
 
         res.json({ ok: true, affected });
     } catch (err) {
-        logger.error('Bulk action error', err);
+        console.error('[API] Bulk action error:', err);
         res.status(500).json({ error: 'Failed to perform bulk action' });
+    }
+});
+
+// GET /api/leads/export/csv — export leads to CSV
+router.get('/api/leads/export/csv', apiKeyAuth, (req, res) => {
+    try {
+        const leads = db.getAllLeads.all();
+        const headers = ['place_id', 'business_name', 'address', 'phone', 'email', 'website', 'rating', 'review_count', 'city_slug', 'score', 'status', 'created_at'];
+        const csvRows = [headers.join(',')];
+
+        for (const lead of leads) {
+            const row = headers.map(h => {
+                const val = lead[h] || '';
+                return `"${String(val).replace(/"/g, '""')}"`;
+            });
+            csvRows.push(row.join(','));
+        }
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename=leads_export.csv');
+        res.send(csvRows.join('\n'));
+    } catch (err) {
+        console.error('[API] CSV export error:', err);
+        res.status(500).json({ error: 'Failed to export leads' });
     }
 });
 
@@ -440,14 +404,10 @@ router.post('/api/leads/bulk', apiKeyAuth, (req, res) => {
 // GET /api/campaigns — list all campaigns
 router.get('/api/campaigns', apiKeyAuth, (req, res) => {
     try {
-        const campaigns = db.getAllCampaigns.all();
-        const campaignsWithStats = campaigns.map(c => {
-            const stats = db.getCampaignStats.get(c.id);
-            return { ...c, stats };
-        });
-        res.json({ campaigns: campaignsWithStats });
+        const campaigns = db.getAllCampaignsWithStats.all();
+        res.json({ campaigns });
     } catch (err) {
-        logger.error('Campaigns list error', err);
+        console.error('[API] Campaigns list error:', err);
         res.status(500).json({ error: 'Failed to fetch campaigns' });
     }
 });
@@ -463,7 +423,7 @@ router.get('/api/campaigns/:id', apiKeyAuth, (req, res) => {
 
         res.json({ ...campaign, recipients, stats });
     } catch (err) {
-        logger.error('Campaign get error', err);
+        console.error('[API] Campaign get error:', err);
         res.status(500).json({ error: 'Failed to fetch campaign' });
     }
 });
@@ -476,43 +436,34 @@ router.post('/api/campaigns', apiKeyAuth, (req, res) => {
             return res.status(400).json({ error: 'name, subject, and body are required' });
         }
 
-        const result = db.insertCampaign.run({
+        const campaignData = {
             name,
             subject,
             body,
             status: scheduled_at ? 'scheduled' : 'draft',
             scheduled_at: scheduled_at || null,
-        });
+        };
 
-        const campaignId = result.lastInsertRowid;
-
-        // Add recipients based on filter
+        let recipients = [];
         if (recipientFilter) {
             let leads;
             if (recipientFilter.status) {
-                leads = db.getLeadsByStatus.all(recipientFilter.status);
+                leads = db.getLeadsByStatus.all(String(recipientFilter.status).slice(0, 50));
             } else if (recipientFilter.city) {
-                leads = db.getLeadsByCity.all(recipientFilter.city);
+                leads = db.getLeadsByCity.all(String(recipientFilter.city).slice(0, 100));
             } else {
                 leads = db.getAllLeads.all();
             }
-
-            const leadsWithEmail = leads.filter(l => l.email && l.email.includes('@'));
-            const recipients = leadsWithEmail.map(l => ({
-                campaign_id: campaignId,
-                lead_id: l.place_id,
-                status: 'pending',
-            }));
-
-            if (recipients.length > 0) {
-                db.insertCampaignRecipientMany(recipients);
-            }
+            recipients = leads
+                .filter(l => l.email && l.email.includes('@'))
+                .map(l => ({ lead_id: l.place_id, status: 'pending' }));
         }
 
-        const campaign = db.getCampaign.get(campaignId);
+        // Atomic: campaign + recipients in one transaction
+        const campaign = db.createCampaignWithRecipients(campaignData, recipients);
         res.json(campaign);
     } catch (err) {
-        logger.error('Campaign create error', err);
+        console.error('[API] Campaign create error:', err);
         res.status(500).json({ error: 'Failed to create campaign' });
     }
 });
@@ -540,7 +491,7 @@ router.put('/api/campaigns/:id', apiKeyAuth, (req, res) => {
         const campaign = db.getCampaign.get(req.params.id);
         res.json(campaign);
     } catch (err) {
-        logger.error('Campaign update error', err);
+        console.error('[API] Campaign update error:', err);
         res.status(500).json({ error: 'Failed to update campaign' });
     }
 });
@@ -568,7 +519,7 @@ router.post('/api/campaigns/:id/send', apiKeyAuth, (req, res) => {
 
         res.json({ ok: true, sent: recipients.length });
     } catch (err) {
-        logger.error('Campaign send error', err);
+        console.error('[API] Campaign send error:', err);
         res.status(500).json({ error: 'Failed to send campaign' });
     }
 });
@@ -582,7 +533,7 @@ router.delete('/api/campaigns/:id', apiKeyAuth, (req, res) => {
         db.deleteCampaign.run(req.params.id);
         res.json({ ok: true });
     } catch (err) {
-        logger.error('Campaign delete error', err);
+        console.error('[API] Campaign delete error:', err);
         res.status(500).json({ error: 'Failed to delete campaign' });
     }
 });
@@ -592,10 +543,10 @@ router.delete('/api/campaigns/:id', apiKeyAuth, (req, res) => {
 // GET /api/calls — list all calls with pagination
 router.get('/api/calls', apiKeyAuth, (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = Math.min(parseInt(req.query.limit) || 25, 100);
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 25), 100);
         const offset = (page - 1) * limit;
-        const outcome = req.query.outcome || null;
+        const outcome = req.query.outcome ? String(req.query.outcome).slice(0, 50) : null;
 
         let calls, total;
 
@@ -619,7 +570,7 @@ router.get('/api/calls', apiKeyAuth, (req, res) => {
             },
         });
     } catch (err) {
-        logger.error('Calls list error', err);
+        console.error('[API] Calls list error:', err);
         res.status(500).json({ error: 'Failed to fetch calls' });
     }
 });
@@ -631,7 +582,7 @@ router.get('/api/calls/:id', apiKeyAuth, (req, res) => {
         if (!call) return res.status(404).json({ error: 'Call not found' });
         res.json(call);
     } catch (err) {
-        logger.error('Call get error', err);
+        console.error('[API] Call get error:', err);
         res.status(500).json({ error: 'Failed to fetch call' });
     }
 });
@@ -652,7 +603,7 @@ router.put('/api/calls/:id', apiKeyAuth, (req, res) => {
         const updated = db.getCall.get(req.params.id);
         res.json(updated);
     } catch (err) {
-        logger.error('Call update error', err);
+        console.error('[API] Call update error:', err);
         res.status(500).json({ error: 'Failed to update call' });
     }
 });
@@ -662,8 +613,8 @@ router.put('/api/calls/:id', apiKeyAuth, (req, res) => {
 // GET /api/payments — list all payments with pagination
 router.get('/api/payments', apiKeyAuth, (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = Math.min(parseInt(req.query.limit) || 25, 100);
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 25), 100);
         const offset = (page - 1) * limit;
 
         const countResult = db.getPaymentsCount.get();
@@ -679,7 +630,7 @@ router.get('/api/payments', apiKeyAuth, (req, res) => {
             },
         });
     } catch (err) {
-        logger.error('Payments list error', err);
+        console.error('[API] Payments list error:', err);
         res.status(500).json({ error: 'Failed to fetch payments' });
     }
 });
@@ -701,13 +652,13 @@ router.get('/api/payments/stats', apiKeyAuth, (req, res) => {
             recent,
         });
     } catch (err) {
-        logger.error('Payment stats error', err);
+        console.error('[API] Payment stats error:', err);
         res.status(500).json({ error: 'Failed to fetch payment stats' });
     }
 });
 
 // ── POST /api/run-single — run pipeline on one business (no scraping) ──────
-router.post('/api/run-single', apiKeyAuth, pipelineRunLimiter, async (req, res) => {
+router.post('/api/run-single', apiKeyAuth, pipelineRunLimiter, asyncHandler(async (req, res) => {
     const {
         businessName,
         website,
@@ -721,29 +672,15 @@ router.post('/api/run-single', apiKeyAuth, pipelineRunLimiter, async (req, res) 
     if (!businessName) return res.status(400).json({ error: 'businessName is required' });
 
     const jobId = `single-${Date.now()}`;
-    const dataDir = path.join('data', jobId);
-    fs.mkdirSync(dataDir, { recursive: true });
-    fs.mkdirSync('logs', { recursive: true });
+    const { relativeDir, files } = storage.createJobDirectory(jobId);
+    const dataDir = relativeDir;
 
-    // Write a single-row leads CSV so the pipeline can use it
     const normalizedWebsite = website ? (website.startsWith('http') ? website : `https://${website}`) : '';
     const leadsPath = path.join(dataDir, 'leads.csv');
-    fs.writeFileSync(leadsPath,
+    storage.writeTextFile(leadsPath,
         `name,phone,website,city,address,rating,reviews,business_name\n` +
         `"${businessName}","${phone}","${normalizedWebsite}","${city}","","","","${businessName}"\n`
     );
-
-    const files = {
-        leads: leadsPath,
-        audited: path.join(dataDir, 'audited_leads.csv'),
-        socialAudited: path.join(dataDir, 'social_audited.csv'),
-        enriched: path.join(dataDir, 'enriched_leads.csv'),
-        outreach: path.join(dataDir, 'outreach_messages.csv'),
-        demos: path.join('public', 'demos', jobId),
-        demo: path.join(dataDir, 'demo_leads.csv'),
-        emailLog: path.join('logs', `email_log_${jobId}.csv`),
-        callLog: path.join('logs', `call_log_${jobId}.csv`),
-    };
 
     const job = {
         status: 'running',
@@ -762,18 +699,18 @@ router.post('/api/run-single', apiKeyAuth, pipelineRunLimiter, async (req, res) 
         exportSheets: false,
         sheetsId: null,
         baseUrl: `${req.protocol}://${req.get('host')}`,
+        clients: [],
     };
 
     jobs.set(jobId, job);
     res.json({ jobId, message: `Single-business pipeline started for "${businessName}"` });
 
-    // Run async
     const { runSingleBusiness } = require('../services/pipeline');
     runSingleBusiness(jobId).catch(err => {
         pushLog(jobId, `Pipeline error: ${err.message}`, 'error');
         job.status = 'error';
         broadcast(jobId, { type: 'error', message: err.message });
     });
-});
+}));
 
 module.exports = router;
