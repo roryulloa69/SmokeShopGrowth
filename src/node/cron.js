@@ -1,32 +1,38 @@
 'use strict';
 
 const db = require('./db');
+const cron = require('node-cron');
 
 /**
  * The Cron Manager orchestrates the entire background automation for Smokeshop Growth.
  * 
  * Functions:
- * 1. Process `queued_for_call` leads (1 per minute to prevent overlap)
- * 2. Process follow-up drips (once per hour)
+ * 1. Process `queued_for_call` leads (* * * * * - every minute to prevent overlap)
+ * 2. Process follow-up drips (0 * * * * - once per hour)
  */
 
 class PipelineCron {
     constructor() {
-        this.callInterval = null;
-        this.dripInterval = null;
         this.isCalling = false;
         this.isDripping = false;
     }
 
     start() {
-        console.log('🕒 Pipeline Cron Started: Polling queue and sequences...');
+        console.log('🕒 Pipeline Cron Started: Polling queue and sequences using node-cron...');
         
-        // Polling loop for AI calls: every 60 seconds
-        this.callInterval = setInterval(() => this.processCallQueue(), 60000);
+        // Polling loop for AI calls: every 1 minute
+        cron.schedule('* * * * *', () => {
+            this.processCallQueue();
+        });
         
-        // Initial quick check after 5s
+        // Follow-up drip sequence: top of every hour
+        cron.schedule('0 * * * *', () => {
+            this.processDripQueue();
+        });
+
+        // Initial quick check immediately on boot
         setTimeout(() => this.processCallQueue(), 5000);
-        setTimeout(() => this.processDripQueue(), 10000); // Check drips soon after boot
+        setTimeout(() => this.processDripQueue(), 10000);
     }
 
     async processCallQueue() {
