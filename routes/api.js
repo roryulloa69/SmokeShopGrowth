@@ -132,8 +132,8 @@ router.get('/api/download/:jobId/:file', asyncHandler(async (req, res) => {
     res.download(filePath);
 }));
 
-// GET /api/jobs — list finished jobs
-router.get('/api/jobs', (req, res) => {
+// GET /api/jobs — list finished jobs (requires auth)
+router.get('/api/jobs', apiKeyAuth, (req, res) => {
     const list = [];
     for (const [id, job] of jobs.entries()) {
         list.push({
@@ -172,7 +172,7 @@ router.post('/api/lead', webhookLimiter, asyncHandler(async (req, res) => {
 }));
 
 // GET /api/leads — list captured leads (from CSV)
-router.get('/api/leads', asyncHandler(async (req, res) => {
+router.get('/api/leads', apiKeyAuth, asyncHandler(async (req, res) => {
     // If auth header present, use DB-backed paginated endpoint
     if (req.headers['x-api-key']) {
         try {

@@ -87,6 +87,9 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
   CREATE INDEX IF NOT EXISTS idx_leads_city ON leads(city_slug);
   CREATE INDEX IF NOT EXISTS idx_leads_score ON leads(score DESC);
+  CREATE INDEX IF NOT EXISTS idx_leads_email ON leads(email);
+  CREATE INDEX IF NOT EXISTS idx_leads_business_name ON leads(business_name);
+  CREATE INDEX IF NOT EXISTS idx_leads_city_status ON leads(city_slug, status);
 
   CREATE TABLE IF NOT EXISTS email_campaigns (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -310,6 +313,21 @@ const searchLeads = db.prepare(`
 
 const getAllCampaigns = db.prepare('SELECT * FROM email_campaigns ORDER BY created_at DESC');
 
+// Single query that returns campaigns with their stats (avoids N+1)
+const getAllCampaignsWithStats = db.prepare(`
+  SELECT
+    c.*,
+    COUNT(cr.id) as total_recipients,
+    SUM(CASE WHEN cr.status IN ('sent','opened','clicked') THEN 1 ELSE 0 END) as sent,
+    SUM(CASE WHEN cr.status IN ('opened','clicked') THEN 1 ELSE 0 END) as opened,
+    SUM(CASE WHEN cr.status = 'clicked' THEN 1 ELSE 0 END) as clicked,
+    SUM(CASE WHEN cr.status IN ('bounced','failed') THEN 1 ELSE 0 END) as failed
+  FROM email_campaigns c
+  LEFT JOIN campaign_recipients cr ON c.id = cr.campaign_id
+  GROUP BY c.id
+  ORDER BY c.created_at DESC
+`);
+
 const getCampaign = db.prepare('SELECT * FROM email_campaigns WHERE id = ?');
 
 const insertCampaign = db.prepare(`
@@ -349,6 +367,16 @@ const insertCampaignRecipient = db.prepare(`
 
 const insertCampaignRecipientMany = db.transaction((recipients) => {
   for (const r of recipients) insertCampaignRecipient.run(r);
+});
+
+/** Atomically insert a campaign and its recipients in one transaction. */
+const createCampaignWithRecipients = db.transaction((campaignData, recipients) => {
+    const result = insertCampaign.run(campaignData);
+    const campaignId = result.lastInsertRowid;
+    for (const r of recipients) {
+        insertCampaignRecipient.run({ ...r, campaign_id: campaignId });
+    }
+    return getCampaign.get(campaignId);
 });
 
 const updateRecipientStatus = db.prepare(`
@@ -501,6 +529,7 @@ module.exports = {
     getCallsByOutcome,
     // Email Campaigns
     getAllCampaigns,
+    getAllCampaignsWithStats,
     getCampaign,
     insertCampaign,
     updateCampaign,
@@ -509,6 +538,7 @@ module.exports = {
     getCampaignRecipients,
     insertCampaignRecipient,
     insertCampaignRecipientMany,
+    createCampaignWithRecipients,
     updateRecipientStatus,
     getCampaignStats,
     // Dashboard

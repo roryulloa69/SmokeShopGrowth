@@ -8,16 +8,22 @@
  *   node src/node/pipeline.mjs --query "smoke shop in Houston"
  */
 
-import { execSync } from 'child_process';
+import { spawnSync } from 'child_process';
 import logger from './utils/logger.mjs';
 
-function runScript(scriptPath, args = '') {
+function runScript(scriptPath, args = []) {
+    const argArray = Array.isArray(args) ? args : args.split(/\s+/).filter(Boolean);
     try {
-        logger.info(`Running script: ${scriptPath} ${args}...`);
-        const output = execSync(`node ${scriptPath} ${args}`, { stdio: 'inherit' });
+        logger.info(`Running script: ${scriptPath} ${argArray.join(' ')}...`);
+        const result = spawnSync('node', [scriptPath, ...argArray], {
+            stdio: 'inherit',
+            shell: false,
+        });
+        if (result.error) throw result.error;
+        if (result.status !== 0) throw new Error(`Script ${scriptPath} exited with code ${result.status}`);
     } catch (error) {
         logger.error(`Error running script ${scriptPath}:`, error);
-        throw error; // Stop the pipeline if a step fails
+        throw error;
     }
 }
 

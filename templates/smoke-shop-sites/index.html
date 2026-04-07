@@ -6,6 +6,14 @@
   <meta name="google-site-verification" content="HfgP26EGxor0E5sp2qyjwYYKsNhjDJecvW34ZytGCUw" />
   <title>{{BUSINESS_NAME}} | Premium Smoke Shop in {{CITY}}, {{STATE}}</title>
   <meta name="description" content="{{BUSINESS_NAME}} — {{CITY}}'s premier smoke shop. Premium glass, vaporizers, CBD, kratom, and accessories. Visit us today." />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="{{BUSINESS_NAME}} | Premium Smoke Shop in {{CITY}}, {{STATE}}" />
+  <meta property="og:description" content="{{BUSINESS_NAME}} — {{CITY}}'s best smoke shop. Premium glass, vaporizers, CBD, kratom, and accessories." />
+  <meta property="og:locale" content="en_US" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="{{BUSINESS_NAME}} | {{CITY}}, {{STATE}}" />
+  <meta name="twitter:description" content="Premium smoke shop in {{CITY}}. Expert staff, top brands, unbeatable prices." />
+  <meta name="theme-color" content="#e63946" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,800;0,900;1,700;1,800&display=swap" rel="stylesheet">
@@ -74,6 +82,7 @@
       transform: translate(-50%,-50%);
       transition: width 0.2s, height 0.2s, background 0.2s;
       mix-blend-mode: normal;
+      will-change: transform;
     }
     .cursor-ring {
       position: fixed;
@@ -84,6 +93,7 @@
       z-index: 99998;
       transform: translate(-50%,-50%);
       transition: transform 0.12s ease-out, width 0.25s, height 0.25s;
+      will-change: transform;
     }
     body:has(a:hover) .cursor, body:has(button:hover) .cursor { width: 16px; height: 16px; }
 
@@ -843,7 +853,7 @@
         <li><a href="#contact">Contact</a></li>
         <li><a href="tel:{{PHONE_CLEAN}}" class="btn btn-primary nav-cta">📞 Call Now</a></li>
       </ul>
-      <button class="hamburger" onclick="toggleMobile()" aria-label="Menu">
+      <button class="hamburger" id="hamburger-btn" onclick="toggleMobile()" aria-label="Open menu" aria-expanded="false" aria-controls="mob-menu">
         <span></span><span></span><span></span>
       </button>
     </div>
@@ -1060,7 +1070,7 @@
           <div class="hours-row"><span class="hours-day">Friday</span><span class="hours-time">{{HOURS}}</span></div>
           <div class="hours-row"><span class="hours-day">Saturday</span><span class="hours-time">{{HOURS}}</span></div>
           <div class="hours-row" style="border-bottom:none"><span class="hours-day">Sunday</span><span class="hours-time">{{HOURS}}</span></div>
-          <div class="open-badge"><span class="open-dot"></span> Open Now</div>
+          <div class="open-badge" id="open-status-badge" style="display:none"><span class="open-dot"></span> Open Now</div>
         </div>
         <div class="info-card gsap-reveal">
           <h3>📍 Address</h3>
@@ -1236,10 +1246,32 @@
 
   <script>
     // ═══ AGE GATE ═══
+    (function() {
+      const g = document.getElementById('age-gate');
+      if (sessionStorage.getItem('age-verified')) {
+        g && g.remove();
+      }
+    })();
+
     function closeAgeGate() {
+      sessionStorage.setItem('age-verified', '1');
       const g = document.getElementById('age-gate');
       gsap.to(g, { opacity: 0, duration: 0.5, onComplete: () => g.remove() });
     }
+
+    // ═══ OPEN NOW CHECK ═══
+    (function() {
+      const badge = document.getElementById('open-status-badge');
+      if (!badge) return;
+      const now = new Date();
+      const h = now.getHours();
+      const m = now.getMinutes();
+      const mins = h * 60 + m;
+      // Assumes store hours 10am–10pm (600–1320); adjust if {{HOURS}} differs
+      if (mins >= 600 && mins < 1320) {
+        badge.style.display = 'inline-flex';
+      }
+    })();
 
     // ═══ CURSOR ═══
     const cursor = document.getElementById('cursor');
@@ -1270,6 +1302,7 @@
 
     // ═══ HERO CANVAS PARTICLES ═══
     (function() {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
       const canvas = document.getElementById('hero-canvas');
       const ctx = canvas.getContext('2d');
       let W, H, particles = [];
@@ -1343,7 +1376,7 @@
 
     const tl = gsap.timeline({ delay: 0.3 });
 
-    tl.to('#hero-badge', { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out', from: { opacity: 0, y: 30 } });
+    tl.fromTo('#hero-badge', { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' });
 
     // Split text animation on hero title
     if (typeof SplitType !== 'undefined') {
@@ -1359,9 +1392,9 @@
       tl.to('#hero-title', { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' });
     }
 
-    tl.to('#hero-sub', { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out', from: { opacity: 0, y: 30 } }, '-=0.3');
-    tl.to('#hero-actions', { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out', from: { opacity: 0, y: 20 } }, '-=0.2');
-    tl.to('#hero-stats', { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out', from: { opacity: 0, y: 20 } }, '-=0.1');
+    tl.fromTo('#hero-sub', { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, '-=0.3');
+    tl.fromTo('#hero-actions', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, '-=0.2');
+    tl.fromTo('#hero-stats', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, '-=0.1');
 
     // Orb parallax
     gsap.to('.orb-1', {
@@ -1492,8 +1525,12 @@
 
     // ═══ MOBILE MENU ═══
     function toggleMobile() {
-      document.getElementById('mob-menu').classList.toggle('open');
-      document.getElementById('mob-overlay').classList.toggle('open');
+      const menu = document.getElementById('mob-menu');
+      const overlay = document.getElementById('mob-overlay');
+      const btn = document.getElementById('hamburger-btn');
+      const isOpen = menu.classList.toggle('open');
+      overlay.classList.toggle('open', isOpen);
+      if (btn) btn.setAttribute('aria-expanded', String(isOpen));
     }
   </script>
 </body>

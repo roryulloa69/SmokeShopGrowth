@@ -7,7 +7,73 @@ const csv = require('csv-parser');
 const n8nService = require('../src/node/n8n_service');
 const { jobs, pushLog, broadcast } = require('./sse');
 
+const MAX_CONCURRENT_PIPELINES = parseInt(process.env.MAX_CONCURRENT_PIPELINES || '3', 10);
+const PIPELINE_QUEUE_TIMEOUT_MS = parseInt(process.env.PIPELINE_QUEUE_TIMEOUT_MS || '300000', 10);
+let _runningPipelines = 0;
+const _waitQueue = [];
+
+function drainQueue() {
+    while (_runningPipelines < MAX_CONCURRENT_PIPELINES && _waitQueue.length > 0) {
+        const next = _waitQueue.shift();
+        if (next.timer) clearTimeout(next.timer);
+        _runningPipelines++;
+        next.resolve();
+    }
+}
+
+function releaseSlot() {
+    _runningPipelines = Math.max(0, _runningPipelines - 1);
+    drainQueue();
+}
+
+function acquireSlot(jobId, mode = 'pipeline') {
+    return new Promise((resolve, reject) => {
+        if (_runningPipelines < MAX_CONCURRENT_PIPELINES && _waitQueue.length === 0) {
+            _runningPipelines++;
+            return resolve();
+        }
+
+        const queueType = mode === 'single' ? 'single-business pipeline' : 'pipeline';
+        pushLog(jobId, `⏳ Server busy. Queuing ${queueType} (position ${_waitQueue.length + 1})…`, 'warn');
+
+        const entry = {
+            resolve,
+            reject,
+            timer: null,
+        };
+
+        entry.timer = setTimeout(() => {
+            const idx = _waitQueue.indexOf(entry);
+            if (idx !== -1) _waitQueue.splice(idx, 1);
+            reject(new Error(`Queue timeout after ${Math.round(PIPELINE_QUEUE_TIMEOUT_MS / 1000)}s while waiting for capacity.`));
+        }, PIPELINE_QUEUE_TIMEOUT_MS);
+
+        _waitQueue.push(entry);
+    });
+}
+
 async function runPipeline(jobId) {
+    try {
+        await acquireSlot(jobId, 'pipeline');
+    } catch (err) {
+        const job = jobs.get(jobId);
+        if (job) {
+            job.status = 'failed';
+            job.error = err.message;
+            pushLog(jobId, `[ERROR] ${job.error}`, 'error');
+            broadcast(jobId, { type: 'done', status: 'failed', error: job.error });
+        }
+        return;
+    }
+
+    try {
+        await _runPipelineInternal(jobId);
+    } finally {
+        releaseSlot();
+    }
+}
+
+async function _runPipelineInternal(jobId) {
     const job = jobs.get(jobId);
 
     // Step 1: Scrape
@@ -193,7 +259,7 @@ async function runPipeline(jobId) {
     });
 }
 
-function runChild(jobId, cmd, args, timeoutMs = 600000) {
+function runChild(jobId, cmd, args, timeoutMs = 1200000) {
     return new Promise((resolve, reject) => {
         const proc = spawn(cmd, args, {
             shell: false,
@@ -244,8 +310,30 @@ function countCsvRows(filePath) {
 /**
  * runSingleBusiness — runs Firecrawl → Outreach → Demo → Email → Call
  * for a single pre-populated leads.csv (no scraping step).
+ * Counts against the shared concurrency limit.
  */
 async function runSingleBusiness(jobId) {
+    try {
+        await acquireSlot(jobId, 'single');
+    } catch (err) {
+        const job = jobs.get(jobId);
+        if (job) {
+            job.status = 'failed';
+            job.error = err.message;
+            pushLog(jobId, `[ERROR] ${job.error}`, 'error');
+            broadcast(jobId, { type: 'done', status: 'failed', error: job.error });
+        }
+        return;
+    }
+
+    try {
+        await _runSingleBusinessInternal(jobId);
+    } finally {
+        releaseSlot();
+    }
+}
+
+async function _runSingleBusinessInternal(jobId) {
     const job = jobs.get(jobId);
 
     pushLog(jobId, `🚀 Starting single-business pipeline for: ${job.city}`, 'step');

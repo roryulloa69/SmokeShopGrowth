@@ -4,27 +4,16 @@ const router = require('express').Router();
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const nodemailer = require('nodemailer');
 const n8nService = require('../src/node/n8n_service');
 const { pushLog } = require('../services/sse');
 const storage = require('../services/storage');
+const { getTransporter, sendMail } = require('../services/email');
 const { webhookLimiter } = require('../middleware/rate-limit');
 const { insertPayment } = require('../src/node/db');
 const { redactEmail, redactPhone } = require('../utils/redact');
 const db = require('../src/node/db');
 
 const PORT = process.env.PORT || 3000;
-
-/** Shared SMTP transporter — created once, reused across routes. */
-function getTransporter() {
-    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) return null;
-    return nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.SMTP_PORT || '587', 10),
-        secure: process.env.SMTP_PORT === '465',
-        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-    });
-}
 
 // POST /webhook/call — Zapier webhook -> trigger ElevenLabs call
 router.post('/webhook/call', webhookLimiter, async (req, res) => {
@@ -212,24 +201,33 @@ router.post('/webhook/vapi', webhookLimiter, async (req, res) => {
                 contact_value: collected_email ? 'email_captured' : 'no_contact',
                 timestamp: new Date().toISOString(),
             };
-            fetch(zapierUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            }).catch(err => console.error('Zapier forward error:', err.message));
+            try {
+                const zapierRes = await fetch(zapierUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                if (!zapierRes.ok) console.error(`Zapier forward failed: HTTP ${zapierRes.status}`);
+            } catch (zapierErr) {
+                console.error('Zapier forward error:', zapierErr.message);
+            }
         }
 
-        n8nService.notifyCallOutcome({
-            business_name,
-            phone,
-            city,
-            call_id,
-            duration_seconds: duration,
-            outcome,
-            summary,
-            email: collected_email,
-            timestamp: new Date().toISOString()
-        });
+        try {
+            await n8nService.notifyCallOutcome({
+                business_name,
+                phone,
+                city,
+                call_id,
+                duration_seconds: duration,
+                outcome,
+                summary,
+                email: collected_email,
+                timestamp: new Date().toISOString(),
+            });
+        } catch (n8nErr) {
+            console.error('n8n notify error:', n8nErr.message);
+        }
     } catch (err) {
         console.error('Vapi webhook processing error:', err.message);
     }
@@ -344,9 +342,10 @@ router.post('/webhook/stripe', express.raw({ type: 'application/json' }), async 
         storage.appendJsonl('payments.jsonl', paymentLog);
 
         try {
-            const slug = businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+            if (!businessName || businessName.length > 200) throw new Error('Invalid business name');
+            const slug = businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '').slice(0, 80);
 
-            const templateHtml = fs.readFileSync(path.join(__dirname, '..', 'template', 'index.html'), 'utf-8');
+            const templateHtml = await fs.promises.readFile(path.join(__dirname, '..', 'template', 'index.html'), 'utf-8');
             const templateCss = path.join(__dirname, '..', 'template', 'styles.css');
             const templateAnimations = path.join(__dirname, '..', 'template', 'animations.js');
 
@@ -368,13 +367,11 @@ router.post('/webhook/stripe', express.raw({ type: 'application/json' }), async 
             const liveUrl = storage.scaffoldDeployment(slug, templateHtml, shopConfig, templateCss, templateAnimations);
             console.log(`[DEPLOY] Site generated: ${liveUrl}`);
 
-            const transporter = getTransporter();
-            if (email && transporter) {
+            if (email) {
                 const serverBase = process.env.PUBLIC_URL || process.env.DEMO_BASE_URL || `http://localhost:${PORT}`;
                 const fullUrl = serverBase + liveUrl;
 
-                await transporter.sendMail({
-                    from: `"SmokeShopGrowth" <${process.env.SMTP_USER}>`,
+                const sent = await sendMail({
                     to: email,
                     subject: `Your website is live! — ${businessName}`,
                     html: `
@@ -393,17 +390,15 @@ router.post('/webhook/stripe', express.raw({ type: 'application/json' }), async 
                         </div>`,
                     text: `Hey ${businessName}! Your website is live: ${fullUrl}\n\nReply with any changes. — SmokeShopGrowth`,
                 });
-                console.log(`[DELIVERY] Email sent to ${redactEmail(email)} with live URL`);
+                if (sent) console.log(`[DELIVERY] Email sent to ${redactEmail(email)} with live URL`);
             }
 
-            if (transporter) {
-                await transporter.sendMail({
-                    from: `"Payment Alert" <${process.env.SMTP_USER}>`,
-                    to: process.env.SMTP_USER,
-                    subject: `$${amount} PAID — ${businessName} (${tier})`,
-                    text: `Payment received!\n\nBusiness: ${businessName}\nEmail: ${email}\nAmount: $${amount}\nTier: ${tier}\nCity: ${city}\nSite: /deployments/shop-${slug}/index.html`,
-                });
-            }
+            await sendMail({
+                from: `"Payment Alert" <${process.env.SMTP_USER}>`,
+                to: process.env.SMTP_USER,
+                subject: `$${amount} PAID — ${businessName} (${tier})`,
+                text: `Payment received!\n\nBusiness: ${businessName}\nEmail: ${email}\nAmount: $${amount}\nTier: ${tier}\nCity: ${city}\nSite: /deployments/shop-${slug}/index.html`,
+            });
 
             n8nService.notifyPipelineEvent('payment_received', { email, businessName, city, tier, amount });
 
