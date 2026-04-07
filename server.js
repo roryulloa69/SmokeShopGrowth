@@ -132,6 +132,9 @@ process.on('unhandledRejection', (reason, promise) => {
 if (require.main === module) {
     app.listen(PORT, () => {
         logger.info(`Dashboard running at http://localhost:${PORT}`);
+
+        // Start background automation cron tasks
+        require('./src/node/cron').start();
     });
 }
 
