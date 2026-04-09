@@ -23,6 +23,10 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
 
+# Install frontend dependencies separately (better layer caching)
+COPY frontend/package*.json ./frontend/
+RUN cd frontend && npm ci
+
 # Copy Python requirements and install
 COPY requirements.txt .
 COPY python-requirements.txt .
@@ -33,6 +37,9 @@ RUN python3 -m playwright install chromium
 
 # Copy project files
 COPY . .
+
+# Build the React frontend so server.js can serve from frontend/dist/
+RUN cd frontend && npm run build
 
 # Create necessary directories
 RUN mkdir -p /app/logs /app/data /app/deployments
