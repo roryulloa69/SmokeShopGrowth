@@ -27,6 +27,7 @@ import fs from 'fs';
 import path from 'path';
 import { mkdirSync, appendFileSync } from 'fs';
 import 'dotenv/config';
+import { readCsv, writeCsv } from '../src/node/utils/csv.mjs';
 
 
 // ──────────────────────────────────────────────
@@ -40,7 +41,7 @@ const CITY = getArg('--city', '');
 const BIZ_TYPE = getArg('--type', 'smoke shop');
 const MAX_RESULTS = getArg('--max-results', '200');
 const CONCURRENCY = getArg('--concurrency', '5');
-const FROM_STEP = parseInt(getArg('--from-step', '1'), 10);
+const FROM_STEP = parseFloat(getArg('--from-step', '1'));
 const SKIP_EMAIL = hasFlag('--skip-email');
 const HEADLESS = hasFlag('--headless') ? '--headless' : '';
 const SKIP_LH = hasFlag('--skip-lighthouse') ? '--skip-lighthouse' : '';
@@ -133,6 +134,47 @@ async function step1_scrape() {
     ];
     if (HEADLESS) scraperArgs.push('--headless');
     await runProcess('python', scraperArgs, 'Google Maps Scraper');
+}
+
+/** Extract business name from a Google Maps URL when the scraper missed it. */
+function nameFromMapsUrl(url) {
+    if (!url) return '';
+    const match = url.match(/\/maps\/place\/([^/@]+)/);
+    if (!match) return '';
+    return decodeURIComponent(match[1].replace(/\+/g, ' ')).trim();
+}
+
+async function step1b_fixAndFilter() {
+    banner('STEP 1b — Fix Names & Filter No-Website Leads');
+    if (!fs.existsSync(LEADS_CSV)) {
+        throw new Error(`Leads file not found: ${LEADS_CSV}`);
+    }
+    const leads = await readCsv(LEADS_CSV);
+    const before = leads.length;
+
+    const fixed = leads.map(lead => {
+        // Fill in missing business names from Google Maps URL
+        if (!lead.business_name && lead.google_maps_url) {
+            lead.business_name = nameFromMapsUrl(lead.google_maps_url);
+        }
+        return lead;
+    });
+
+    // Keep only shops without a website
+    const noWebsite = fixed.filter(lead => {
+        const site = (lead.website || '').trim();
+        return !site || site === '' || site === 'N/A';
+    });
+
+    log(`Fixed names: ${fixed.filter(l => l.business_name).length}/${before}`);
+    log(`No-website filter: ${before} → ${noWebsite.length} leads`);
+
+    if (noWebsite.length === 0) {
+        log('WARNING: No leads without a website found. All shops already have sites.', 'WARN');
+    }
+
+    await writeCsv(LEADS_CSV, noWebsite);
+    log(`Saved ${noWebsite.length} no-website leads to ${LEADS_CSV}`);
 }
 
 async function step2_audit() {
@@ -246,12 +288,13 @@ async function main() {
     log(`Pipeline log  : ${PIPELINE_LOG}`);
 
     const steps = [
-        { step: 1, label: 'Scrape Google Maps', fn: step1_scrape },
-        { step: 2, label: 'Audit Websites', fn: step2_audit },
-        { step: 3, label: 'Social Audit', fn: step3_socialAudit },
-        { step: 4, label: 'Generate Outreach', fn: step4_outreach },
-        { step: 5, label: 'Generate Demo Sites', fn: step5_demos },
-        { step: 6, label: 'Send Emails', fn: step6_email },
+        { step: 1,   label: 'Scrape Google Maps',      fn: step1_scrape },
+        { step: 1.5, label: 'Fix Names & Filter',       fn: step1b_fixAndFilter },
+        { step: 2,   label: 'Audit Websites',           fn: step2_audit },
+        { step: 3,   label: 'Social Audit',             fn: step3_socialAudit },
+        { step: 4,   label: 'Generate Outreach',        fn: step4_outreach },
+        { step: 5,   label: 'Generate Demo Sites',      fn: step5_demos },
+        { step: 6,   label: 'Send Emails',              fn: step6_email },
     ];
 
     const results = [];

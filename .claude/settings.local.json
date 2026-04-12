@@ -30,7 +30,14 @@
       "Bash(git config:*)",
       "Bash(ls:*)",
       "Bash(python:*)",
-      "Bash(git -C c:/Users/roryu/SmokeShopGrowth diff HEAD -- public/index.html)"
+      "Bash(git -C c:/Users/roryu/SmokeShopGrowth diff HEAD -- public/index.html)",
+      "Skill(sc:design)",
+      "Bash(start \"\" \"C:\\\\Users\\\\roryu\\\\smokeshopgrowth\\\\public\\\\index.html\")",
+      "Bash(start \"\" \"C:\\\\Users\\\\roryu\\\\smokeshopgrowth\\\\demo\\\\index.html\")",
+      "Bash(npm run:*)",
+      "Bash(pkill -f \"run_pipeline\")",
+      "Bash(pkill -f \"scraper.py\")",
+      "Bash(taskkill /F /IM python.exe)"
     ]
   }
 }
