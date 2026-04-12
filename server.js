@@ -1,119 +1,139 @@
 /**
- * SmokeShopGrowth Server
- * ======================
- * Express web server — serves the public marketing site at /,
- * the internal lead-gen dashboard at /dashboard, and all API +
- * webhook routes for the pipeline, voice agent, and Stripe.
- *
- * Start:  node server.js
- * Open:   http://localhost:3000
+ * Dashboard Server
+ * ================
+ * Express web server that powers the lead generation dashboard.
  */
-
 'use strict';
 require('dotenv').config();
-const config = require('./utils/config'); // Early fail-fast validation
 
 const express = require('express');
+const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const { createLogger } = require('./utils/logger');
+const { errorHandler, NotFoundError } = require('./utils/errors');
 
-const rateLimit = require('express-rate-limit');
-const { errorHandler } = require('./utils/errors');
-const { makeJobId } = require('./services/sse');
-
+const logger = createLogger('Server');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
+// CORS policy
+const allowedOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
+    : [];
+app.use(cors({
+    origin: (origin, callback) => {
+        // Allow requests with no origin (server-to-server, curl, mobile apps)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        callback(new Error('Not allowed by CORS'));
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'x-api-key'],
+    credentials: true,
+}));
 
-const webhookLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 50,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: 'Too many requests, please try again later.' },
+// Request logging middleware
+app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+        const duration = Date.now() - start;
+        if (!req.path.startsWith('/api/status')) { // Skip SSE status logs
+            logger.info(`${req.method} ${req.path} ${res.statusCode} ${duration}ms`);
+        }
+    });
+    next();
 });
 
-// Dashboard route — serves the internal tool at /dashboard
-app.get('/dashboard', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+// Fix: Stripe webhook needs raw body
+app.use((req, res, next) => {
+    if (req.originalUrl === '/webhook/stripe') return next();
+    express.json({ limit: '10mb' })(req, res, next);
+});
+
+// Security headers
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    next();
+});
+
+// Static files
+app.use(express.static(path.join(__dirname, 'public'), {
+    maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0,
+}));
+app.use(express.static(path.join(__dirname, 'frontend', 'dist')));
+app.use('/demos', express.static(path.join(__dirname, 'public/demos')));
+
+const deployPath = path.join(__dirname, 'deployments');
+if (!fs.existsSync(deployPath)) fs.mkdirSync(deployPath);
+app.use('/deployments', express.static(deployPath));
+
+// Serve assets for the premium template
+app.use(express.static(path.join(__dirname, 'template')));
+
+// Root route
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'frontend', 'dist', 'index.html'));
 });
 
 // Health check
-app.get('/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// Serve static files (public/index.html = marketing landing page)
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Health check (no auth required)
 app.get('/api/ping', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// Mount modular routers
-const apiRouter = require('./routes/api');
-const webhookRouter = require('./routes/webhooks');
-
-app.use(apiRouter);
-app.use(webhookRouter);
-
-// ──────────────────────────────────────────────
-// Template Form Submission Endpoint
-// ──────────────────────────────────────────────
-const templateSubmissions = [];
-
-app.post('/api/template-submission', webhookLimiter, async (req, res) => {
-    try {
-        const { shopName, city, phone, email } = req.body;
-
-        if (!shopName || !city || !phone || !email) {
-            return res.status(400).json({ error: 'Missing required fields' });
-        }
-
-        const submission = {
-            id: makeJobId(),
-            shopName: shopName.trim(),
-            city: city.trim(),
-            phone: phone.trim(),
-            email: email.trim(),
-            timestamp: new Date().toISOString()
-        };
-
-        templateSubmissions.push(submission);
-        console.log(`Form received: ${submission.shopName} (${submission.city})`);
-
-        res.status(200).json({
-            success: true,
-            message: 'Thank you! We\'ll contact you shortly.',
-            submissionId: submission.id
-        });
-    } catch (err) {
-        console.error('Form submission error:', err.message);
-        res.status(500).json({ error: 'Failed to process submission' });
-    }
-});
-
-app.get('/api/template-submissions', (req, res) => {
-    res.json({
-        count: templateSubmissions.length,
-        submissions: templateSubmissions
+    res.json({ 
+        status: 'ok', 
+        timestamp: new Date().toISOString(),
+        version: process.env.npm_package_version || '1.0.0',
+        uptime: process.uptime(),
     });
 });
 
-// ── Global error handler ────────────────────────────────────────────────────
-// Must be defined AFTER all routes
+// Railway health check
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok', service: 'dashboard', ts: Date.now() });
+});
+
+// Mount route modules
+app.use(require('./routes/api'));
+app.use(require('./routes/demos'));
+app.use(require('./routes/social'));
+app.use(require('./routes/webhooks'));
+
+// 404 handler
+app.use((req, res, next) => {
+    next(new NotFoundError('Route'));
+});
+
+// Global error handler
 app.use(errorHandler);
+
+// Graceful shutdown
+const shutdown = (signal) => {
+    logger.info(`${signal} received. Shutting down gracefully...`);
+    process.exit(0);
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
+// Uncaught error handlers
+process.on('uncaughtException', (err) => {
+    logger.error('Uncaught Exception', err);
+    process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    logger.error('Unhandled Rejection', { reason, promise: String(promise) });
+});
 
 // Start server
 if (require.main === module) {
     app.listen(PORT, () => {
-        console.log(`\n🚀 SmokeShopGrowth running at http://localhost:${PORT}`);
-        console.log(`   Landing page: http://localhost:${PORT}/`);
-        console.log(`   Dashboard:    http://localhost:${PORT}/dashboard\n`);
-        
-        // Start background automation chron tasks
+        logger.info(`Dashboard running at http://localhost:${PORT}`);
+
+        // Start background automation cron tasks
         require('./src/node/cron').start();
     });
 }

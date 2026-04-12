@@ -132,8 +132,8 @@ router.get('/api/download/:jobId/:file', asyncHandler(async (req, res) => {
     res.download(filePath);
 }));
 
-// GET /api/jobs — list finished jobs
-router.get('/api/jobs', (req, res) => {
+// GET /api/jobs — list finished jobs (requires auth)
+router.get('/api/jobs', apiKeyAuth, (req, res) => {
     const list = [];
     for (const [id, job] of jobs.entries()) {
         list.push({
@@ -172,17 +172,16 @@ router.post('/api/lead', webhookLimiter, asyncHandler(async (req, res) => {
 }));
 
 // GET /api/leads — list captured leads (from CSV)
-router.get('/api/leads', asyncHandler(async (req, res) => {
+router.get('/api/leads', apiKeyAuth, asyncHandler(async (req, res) => {
     // If auth header present, use DB-backed paginated endpoint
     if (req.headers['x-api-key']) {
         try {
-            const page = parseInt(req.query.page) || 1;
-            const limit = Math.min(parseInt(req.query.limit) || 25, 100);
+            const page = Math.max(1, parseInt(req.query.page) || 1);
+            const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 25), 100);
             const offset = (page - 1) * limit;
-            const status = req.query.status || null;
-            const stage = req.query.stage || null;
-            const cityFilter = req.query.city || null;
-            const search = req.query.search || null;
+            const status = req.query.status ? String(req.query.status).slice(0, 50) : null;
+            const cityFilter = req.query.city ? String(req.query.city).slice(0, 100) : null;
+            const search = req.query.search ? String(req.query.search).slice(0, 200) : null;
 
             let leads, total;
 
@@ -190,14 +189,6 @@ router.get('/api/leads', asyncHandler(async (req, res) => {
                 const searchPattern = `%${search}%`;
                 leads = db.searchLeads.all(searchPattern, searchPattern, searchPattern);
                 total = leads.length;
-            } else if (stage && cityFilter) {
-                const countResult = db.getLeadsByCityAndStageCount.get(cityFilter, stage);
-                total = countResult.total;
-                leads = db.getLeadsByCityAndStagePaginated.all(cityFilter, stage, limit, offset);
-            } else if (stage) {
-                const countResult = db.getLeadsByStageCount.get(stage);
-                total = countResult.total;
-                leads = db.getLeadsByStagePaginated.all(stage, limit, offset);
             } else if (status && cityFilter) {
                 const countResult = db.getLeadsByCityAndStatusCount.get(cityFilter, status);
                 total = countResult.total;
@@ -240,30 +231,6 @@ router.get('/api/leads', asyncHandler(async (req, res) => {
     const leads = await storage.readCsv(csvPath);
 
     res.json({ leads });
-}));
-
-// PATCH /api/leads/:place_id/stage — Update CRM stage
-router.patch('/api/leads/:place_id/stage', asyncHandler(async (req, res) => {
-    // Basic API Key check
-    const apiKey = req.headers['x-api-key'] || req.query.key;
-    if (apiKey !== config.API_KEY) {
-        return res.status(401).json({ error: 'Unauthorized. Invalid API Key.' });
-    }
-
-    const { place_id } = req.params;
-    const { stage } = req.body;
-
-    if (!stage) {
-        return res.status(400).json({ error: 'stage is required' });
-    }
-
-    try {
-        db.updateLeadStage.run(stage, place_id);
-        res.json({ ok: true, place_id, stage });
-    } catch (err) {
-        console.error('[API] Error updating lead stage:', err);
-        res.status(500).json({ error: 'Failed to update lead stage' });
-    }
 }));
 
 // GET /api/stats — get dashboard statistics
@@ -328,67 +295,55 @@ router.get('/api/leads/captured', asyncHandler(async (req, res) => {
 // ════════════════════════════════════════════════════════════════════════════
 
 // GET /api/dashboard/stats — dashboard overview stats
-router.get('/api/dashboard/stats', apiKeyAuth, (req, res) => {
-    try {
-        const stats = db.getDashboardStats.get();
-        res.json(stats);
-    } catch (err) {
-        console.error('[API] Dashboard stats error:', err);
-        res.status(500).json({ error: 'Failed to fetch dashboard stats' });
-    }
-});
+router.get('/api/dashboard/stats', apiKeyAuth, asyncHandler(async (req, res) => {
+    const stats = db.getDashboardStats.get();
+    res.json(stats);
+}));
 
 // ── LEADS CRM ───────────────────────────────────────────────────────────────
 
 // GET /api/leads/:placeId — get single lead
-router.get('/api/leads/:placeId', apiKeyAuth, (req, res) => {
-    try {
-        const lead = db.getLeadByPlaceId.get(req.params.placeId);
-        if (!lead) return res.status(404).json({ error: 'Lead not found' });
-        res.json(lead);
-    } catch (err) {
-        console.error('[API] Lead get error:', err);
-        res.status(500).json({ error: 'Failed to fetch lead' });
-    }
-});
+router.get('/api/leads/:placeId', apiKeyAuth, asyncHandler(async (req, res) => {
+    const lead = db.getLeadByPlaceId.get(req.params.placeId);
+    if (!lead) throw new NotFoundError('Lead');
+    res.json(lead);
+}));
 
 // PUT /api/leads/:placeId — update lead
-router.put('/api/leads/:placeId', apiKeyAuth, (req, res) => {
-    try {
-        const existing = db.getLeadByPlaceId.get(req.params.placeId);
-        if (!existing) return res.status(404).json({ error: 'Lead not found' });
+router.put('/api/leads/:placeId', apiKeyAuth, asyncHandler(async (req, res) => {
+    const existing = db.getLeadByPlaceId.get(req.params.placeId);
+    if (!existing) throw new NotFoundError('Lead');
 
-        const { business_name, email, phone, status, score } = req.body;
-        db.updateLead.run({
-            place_id: req.params.placeId,
-            business_name: business_name ?? existing.business_name,
-            email: email ?? existing.email,
-            phone: phone ?? existing.phone,
-            status: status ?? existing.status,
-            score: score ?? existing.score,
-        });
+    const { business_name, email, phone, status, score } = req.body;
 
-        const updated = db.getLeadByPlaceId.get(req.params.placeId);
-        res.json(updated);
-    } catch (err) {
-        console.error('[API] Lead update error:', err);
-        res.status(500).json({ error: 'Failed to update lead' });
+    const VALID_STATUSES = ['scraped', 'audited', 'contacted', 'called', 'paid', 'rejected'];
+    if (status && !VALID_STATUSES.includes(status)) {
+        throw new ValidationError(`Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`);
     }
-});
+    const parsedScore = score !== undefined ? parseInt(score, 10) : existing.score;
+    if (score !== undefined && (isNaN(parsedScore) || parsedScore < 0 || parsedScore > 100)) {
+        throw new ValidationError('score must be an integer between 0 and 100');
+    }
+
+    db.updateLead.run({
+        place_id: req.params.placeId,
+        business_name: business_name ?? existing.business_name,
+        email: email ?? existing.email,
+        phone: phone ?? existing.phone,
+        status: status ?? existing.status,
+        score: parsedScore,
+    });
+
+    res.json(db.getLeadByPlaceId.get(req.params.placeId));
+}));
 
 // DELETE /api/leads/:placeId — delete lead
-router.delete('/api/leads/:placeId', apiKeyAuth, (req, res) => {
-    try {
-        const existing = db.getLeadByPlaceId.get(req.params.placeId);
-        if (!existing) return res.status(404).json({ error: 'Lead not found' });
-
-        db.deleteLead.run(req.params.placeId);
-        res.json({ ok: true });
-    } catch (err) {
-        console.error('[API] Lead delete error:', err);
-        res.status(500).json({ error: 'Failed to delete lead' });
-    }
-});
+router.delete('/api/leads/:placeId', apiKeyAuth, asyncHandler(async (req, res) => {
+    const existing = db.getLeadByPlaceId.get(req.params.placeId);
+    if (!existing) throw new NotFoundError('Lead');
+    db.deleteLead.run(req.params.placeId);
+    res.json({ ok: true });
+}));
 
 // POST /api/leads/bulk — bulk actions on leads
 router.post('/api/leads/bulk', apiKeyAuth, (req, res) => {
@@ -449,12 +404,8 @@ router.get('/api/leads/export/csv', apiKeyAuth, (req, res) => {
 // GET /api/campaigns — list all campaigns
 router.get('/api/campaigns', apiKeyAuth, (req, res) => {
     try {
-        const campaigns = db.getAllCampaigns.all();
-        const campaignsWithStats = campaigns.map(c => {
-            const stats = db.getCampaignStats.get(c.id);
-            return { ...c, stats };
-        });
-        res.json({ campaigns: campaignsWithStats });
+        const campaigns = db.getAllCampaignsWithStats.all();
+        res.json({ campaigns });
     } catch (err) {
         console.error('[API] Campaigns list error:', err);
         res.status(500).json({ error: 'Failed to fetch campaigns' });
@@ -485,39 +436,31 @@ router.post('/api/campaigns', apiKeyAuth, (req, res) => {
             return res.status(400).json({ error: 'name, subject, and body are required' });
         }
 
-        const result = db.insertCampaign.run({
+        const campaignData = {
             name,
             subject,
             body,
             status: scheduled_at ? 'scheduled' : 'draft',
             scheduled_at: scheduled_at || null,
-        });
+        };
 
-        const campaignId = result.lastInsertRowid;
-
+        let recipients = [];
         if (recipientFilter) {
             let leads;
             if (recipientFilter.status) {
-                leads = db.getLeadsByStatus.all(recipientFilter.status);
+                leads = db.getLeadsByStatus.all(String(recipientFilter.status).slice(0, 50));
             } else if (recipientFilter.city) {
-                leads = db.getLeadsByCity.all(recipientFilter.city);
+                leads = db.getLeadsByCity.all(String(recipientFilter.city).slice(0, 100));
             } else {
                 leads = db.getAllLeads.all();
             }
-
-            const leadsWithEmail = leads.filter(l => l.email && l.email.includes('@'));
-            const recipients = leadsWithEmail.map(l => ({
-                campaign_id: campaignId,
-                lead_id: l.place_id,
-                status: 'pending',
-            }));
-
-            if (recipients.length > 0) {
-                db.insertCampaignRecipientMany(recipients);
-            }
+            recipients = leads
+                .filter(l => l.email && l.email.includes('@'))
+                .map(l => ({ lead_id: l.place_id, status: 'pending' }));
         }
 
-        const campaign = db.getCampaign.get(campaignId);
+        // Atomic: campaign + recipients in one transaction
+        const campaign = db.createCampaignWithRecipients(campaignData, recipients);
         res.json(campaign);
     } catch (err) {
         console.error('[API] Campaign create error:', err);
@@ -600,10 +543,10 @@ router.delete('/api/campaigns/:id', apiKeyAuth, (req, res) => {
 // GET /api/calls — list all calls with pagination
 router.get('/api/calls', apiKeyAuth, (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = Math.min(parseInt(req.query.limit) || 25, 100);
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 25), 100);
         const offset = (page - 1) * limit;
-        const outcome = req.query.outcome || null;
+        const outcome = req.query.outcome ? String(req.query.outcome).slice(0, 50) : null;
 
         let calls, total;
 
@@ -670,8 +613,8 @@ router.put('/api/calls/:id', apiKeyAuth, (req, res) => {
 // GET /api/payments — list all payments with pagination
 router.get('/api/payments', apiKeyAuth, (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = Math.min(parseInt(req.query.limit) || 25, 100);
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 25), 100);
         const offset = (page - 1) * limit;
 
         const countResult = db.getPaymentsCount.get();
@@ -715,7 +658,7 @@ router.get('/api/payments/stats', apiKeyAuth, (req, res) => {
 });
 
 // ── POST /api/run-single — run pipeline on one business (no scraping) ──────
-router.post('/api/run-single', apiKeyAuth, pipelineRunLimiter, async (req, res) => {
+router.post('/api/run-single', apiKeyAuth, pipelineRunLimiter, asyncHandler(async (req, res) => {
     const {
         businessName,
         website,
@@ -768,6 +711,6 @@ router.post('/api/run-single', apiKeyAuth, pipelineRunLimiter, async (req, res) 
         job.status = 'error';
         broadcast(jobId, { type: 'error', message: err.message });
     });
-});
+}));
 
 module.exports = router;

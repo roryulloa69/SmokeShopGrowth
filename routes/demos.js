@@ -5,13 +5,19 @@ const path = require('path');
 const fs = require('fs');
 const { makeJobId } = require('../services/sse');
 const { webhookLimiter } = require('../middleware/rate-limit');
+const { redactEmail } = require('../utils/redact');
+<<<<<<< Updated upstream
 const db = require('../src/node/db');
+=======
+const { sendMail } = require('../services/email');
+>>>>>>> Stashed changes
 
 // GET /demos - Gallery page
-router.get('/demos', (req, res) => {
+router.get('/demos', async (req, res) => {
     const demosDir = path.join(__dirname, '..', 'public', 'demos');
     try {
-        const demos = fs.readdirSync(demosDir).filter(f => fs.statSync(path.join(demosDir, f)).isDirectory());
+        const entries = await fs.promises.readdir(demosDir, { withFileTypes: true });
+        const demos = entries.filter(e => e.isDirectory()).map(e => e.name);
         const html = `
             <!DOCTYPE html>
             <html lang="en">
@@ -43,27 +49,27 @@ router.get('/demos', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-const templateSubmissions = [];
+const templateSubmissions = []; // in-memory store for /api/template-submissions
 
 // GET /demo — personalized demo preview via query params
-router.get('/demo', (req, res) => {
+router.get('/demo', async (req, res) => {
     const templatePath = path.join(__dirname, '..', 'template.html');
-    if (!fs.existsSync(templatePath)) {
+    try { await fs.promises.access(templatePath); } catch {
         return res.status(404).send('Demo template not found.');
     }
 
     const business = {
-        name: req.query.name || req.query.shop || 'Your Smoke Shop',
-        city: req.query.city || 'Your City',
-        state: req.query.state || 'TX',
-        phone: req.query.phone || '(000) 000-0000',
-        address: req.query.address || '',
-        rating: req.query.rating || '4.5',
-        reviews: req.query.reviews || '50+',
-        hours: req.query.hours || 'Mon–Sun 9am–10pm',
+        name: (req.query.name || req.query.shop || 'Your Smoke Shop').slice(0, 200),
+        city: (req.query.city || 'Your City').slice(0, 100),
+        state: (req.query.state || 'TX').slice(0, 10),
+        phone: (req.query.phone || '(000) 000-0000').slice(0, 20),
+        address: (req.query.address || '').slice(0, 200),
+        rating: (req.query.rating || '4.5').slice(0, 5),
+        reviews: (req.query.reviews || '50+').slice(0, 10),
+        hours: (req.query.hours || 'Mon–Sun 9am–10pm').slice(0, 100),
     };
 
-    let html = fs.readFileSync(templatePath, 'utf8');
+    let html = await fs.promises.readFile(templatePath, 'utf8');
 
     const nameParts = business.name.split(' ');
     const mid = Math.ceil(nameParts.length / 2);
@@ -140,29 +146,22 @@ router.post('/api/send-demo', webhookLimiter, async (req, res) => {
     }
 
     try {
-        const nodemailer = require('nodemailer');
-        const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST || 'smtp.gmail.com',
-            port: parseInt(process.env.SMTP_PORT || '587', 10),
-            secure: false,
-            auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-        });
-
-        await transporter.sendMail({
+        const sent = await sendMail({
             from: `"${fromName}" <${process.env.SMTP_USER}>`,
             to: email,
-            subject: `Your custom website demo for ${business_name} 🎯`,
+            subject: `Your custom website demo for ${business_name}`,
             html: `<div style="font-family:sans-serif;max-width:580px;margin:0 auto;padding:40px 24px;background:#0a0a0a;color:#fff;">
-                <h1 style="color:#dc2626;">Here's your custom demo, ${business_name}! 🚀</h1>
+                <h1 style="color:#dc2626;">Here's your custom demo, ${business_name}!</h1>
                 <p style="color:#ccc;line-height:1.7;">We put together a premium website just for <strong>${business_name}</strong>. Click below to check it out:</p>
                 <div style="text-align:center;margin:32px 0;">
-                    <a href="${demoUrl}" style="display:inline-block;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;font-weight:700;padding:14px 36px;border-radius:8px;font-size:1.1rem;text-decoration:none;">🌐 View Your Custom Website</a>
+                    <a href="${demoUrl}" style="display:inline-block;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;font-weight:700;padding:14px 36px;border-radius:8px;font-size:1.1rem;text-decoration:none;">View Your Custom Website</a>
                 </div>
                 <p style="color:#aaa;font-size:.9rem;line-height:1.7;">This is a custom design for your shop — only $200 to make it yours. Questions? Call us at (281) 323-0450 or visit smokeshopgrowth.com</p>
                 <hr style="border:none;border-top:1px solid #222;margin:32px 0;"/>
                 <p style="color:#666;font-size:.82rem;">${fromName} • SmokeShopGrowth</p>
             </div>`,
         });
+        if (!sent) return res.status(503).json({ error: 'Email service not configured' });
 
         res.json({ success: true, demoUrl });
     } catch (err) {
@@ -183,7 +182,7 @@ router.post('/api/submit-lead', webhookLimiter, async (req, res) => {
         const csvPath = path.join(dataDir, 'submissions.csv');
         if (!fs.existsSync(csvPath)) fs.writeFileSync(csvPath, "Date,Contact Name,Email,Phone,Tier,Business,City\n");
         fs.appendFileSync(csvPath, `"${submissionDate}","${contactName}","${email}","${phone}","${tier}","${businessName}","${city}"\n`);
-        console.log(`✅ Lead captured: ${email} for ${businessName}`);
+        console.log(`Lead captured: ${redactEmail(email)} for ${businessName}`);
         res.json({ success: true, message: 'Lead captured!' });
     } catch (err) {
         console.error('Lead capture error:', err.message);

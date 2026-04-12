@@ -37,7 +37,10 @@
       "Bash(npm run:*)",
       "Bash(pkill -f \"run_pipeline\")",
       "Bash(pkill -f \"scraper.py\")",
-      "Bash(taskkill /F /IM python.exe)"
+      "Bash(taskkill /F /IM python.exe)",
+      "WebFetch(domain:suitable-proud-tomcat.ngrok-free.app)",
+      "Bash(sed -n '130,150p' server.js)",
+      "Bash(sed -n '10,20p' routes/webhooks.js)"
     ]
   }
 }

@@ -24,6 +24,7 @@ import path from 'path';
 import { createReadStream, mkdirSync, appendFileSync, existsSync } from 'fs';
 
 import sgMail from '@sendgrid/mail';
+import nodemailer from 'nodemailer';
 import csv from 'csv-parser';
 import { format } from '@fast-csv/format';
 
@@ -42,19 +43,23 @@ const DELAY_MS = parseInt(getArg('--delay-ms', '2000'), 10); // courtesy delay b
 // ──────────────────────────────────────────────
 // Env validation
 // ──────────────────────────────────────────────
-const REQUIRED_ENV = ['SENDGRID_API_KEY', 'FROM_EMAIL'];
-
 function validateEnv() {
-    const missing = REQUIRED_ENV.filter(k => !process.env[k]);
-    if (missing.length) {
-        console.error('ERROR: Missing required environment variables:');
-        missing.forEach(k => console.error(`  ${k}`));
-        console.error('\nSet them in your .env or shell:');
-        console.error('  export SENDGRID_API_KEY=SG.xxxxx');
-        console.error('  export FROM_EMAIL=you@gmail.com');
+    const hasSendGrid = !!process.env.SENDGRID_API_KEY;
+    const hasSmtp = !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+
+    if (!hasSendGrid && !hasSmtp) {
+        console.error('ERROR: Missing email configuration. Set SENDGRID_API_KEY or SMTP_HOST/USER/PASS.');
         process.exit(1);
     }
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+    if (!process.env.FROM_EMAIL) {
+        console.error('ERROR: FROM_EMAIL is required.');
+        process.exit(1);
+    }
+
+    if (hasSendGrid) {
+        sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    }
 }
 
 // ──────────────────────────────────────────────
@@ -111,26 +116,53 @@ function writeLogRow(filePath, { businessName, email, status, error = '' }) {
 }
 
 // ──────────────────────────────────────────────
-// SendGrid Mailer
+// Email Transporters
 // ──────────────────────────────────────────────
-async function sendEmailViaSendGrid({ to, subject, text, fromName, fromEmail, replyTo }) {
-    const msg = {
-        to,
-        from: {
-            email: fromEmail,
-            name: fromName,
-        },
-        replyTo: replyTo || fromEmail,
-        subject,
-        text,
-        // Optional: add HTML version
-        html: `<p>${text.replace(/\n/g, '<br>')}</p>`,
-    };
+async function sendEmail({ to, subject, text, fromName, fromEmail, replyTo }) {
+    const hasSendGrid = !!process.env.SENDGRID_API_KEY;
+    const hasSmtp = !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
 
-    try {
-        await sgMail.send(msg);
-    } catch (error) {
-        throw new Error(`SendGrid error: ${error.message || error}`);
+    const html = `<p>${text.replace(/\n/g, '<br>')}</p>`;
+
+    if (hasSendGrid) {
+        const msg = {
+            to,
+            from: { email: fromEmail, name: fromName },
+            replyTo: replyTo || fromEmail,
+            subject,
+            text,
+            html,
+        };
+        try {
+            await sgMail.send(msg);
+            return;
+        } catch (error) {
+            throw new Error(`SendGrid error: ${error.message || error}`);
+        }
+    } else if (hasSmtp) {
+        const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: parseInt(process.env.SMTP_PORT || '587', 10),
+            secure: process.env.SMTP_PORT === '465',
+            auth: {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS,
+            },
+        });
+
+        try {
+            await transporter.sendMail({
+                from: `"${fromName}" <${fromEmail}>`,
+                to,
+                subject,
+                text,
+                html,
+                replyTo: replyTo || fromEmail,
+            });
+            return;
+        } catch (error) {
+            throw new Error(`SMTP error: ${error.message || error}`);
+        }
     }
 }
 
@@ -194,7 +226,7 @@ async function main() {
         }
 
         try {
-            await sendEmailViaSendGrid({
+            await sendEmail({
                 to: recipient, subject, text: message, fromName, fromEmail, replyTo,
             });
             log(`  ✓ Sent to ${recipient}`);

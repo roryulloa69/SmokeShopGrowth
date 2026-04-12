@@ -4,7 +4,7 @@
 A tool for scraping business leads from Google Maps, with automation and monetization in focus.
 
 ## Tech Stack
-- Backend: Python (FastAPI/REST)
+- Backend: Python (Flask/REST)
 - Frontend: Vanilla HTML/JS/CSS (as per global rules)
 - Scraper: Node.js (Playwright/Puppeteer potential)
 - Deployment: Docker, Railway, Render

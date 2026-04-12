@@ -33,16 +33,17 @@ MAX_STALE_SCROLLS = 5
 
 # Google Maps CSS Selectors
 SEARCH_URL_TEMPLATE = "https://www.google.com/maps/search/{query}"
-SEL_DETAIL_NAME = "h1.fontHeadlineLarge"
+# Updated selector for business name (often h1.DUwDvf)
+SEL_DETAIL_NAME = "h1.DUwDvf, h1.fontHeadlineLarge, h1"
 SEL_DETAIL_ADDRESS = "button[data-item-id='address']"
 SEL_DETAIL_PHONE = "button[data-item-id='phone:tel']"
 SEL_DETAIL_WEBSITE = "button[data-item-id='website']"
 SEL_DETAIL_RATING = "div.f8scje span[aria-label*='star']"
 SEL_DETAIL_REVIEWS = "button[jsaction*='pane.rating'] span:nth-child(2)"
 SEL_DETAIL_IMAGE = "img.NIzKQf"
-SEL_SCROLL_CONTAINER = "div.m6QErb"
+SEL_SCROLL_CONTAINER = "div.m6QErb[aria-label*='Results']"
 SEL_END_OF_LIST = "p.HFRwqf"
-SEL_RESULT_ITEM = "div[data-result-index]"
+SEL_RESULT_ITEM = "div[data-result-index], a.hfpxzc"
 
 # Playwright Settings
 BROWSER_ARGS = [

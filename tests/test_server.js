@@ -1,4 +1,3 @@
-process.env.NODE_ENV = 'test';
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert');
 const http = require('http');
@@ -67,20 +66,63 @@ describe('Server Routes', () => {
         assert.ok(data.timestamp);
     });
 
-    it('GET /api/jobs returns 200 with array', async () => {
+    it('GET /api/jobs without auth returns 401', async () => {
         const res = await get('/api/jobs');
+        assert.strictEqual(res.status, 401);
+    });
+
+    it('GET /api/jobs with auth returns 200 with array', async () => {
+        const res = await get('/api/jobs', { auth: true });
         assert.strictEqual(res.status, 200);
         const data = JSON.parse(res.body);
         assert.ok(Array.isArray(data));
     });
 
-    // POST /api/run does not require auth currently
+    it('POST /api/run without auth returns 401', async () => {
+        const res = await post('/api/run', { city: 'Houston' });
+        assert.strictEqual(res.status, 401);
+    });
 
     it('POST /api/run without city returns 400', async () => {
         const res = await post('/api/run', {}, { auth: true });
         assert.strictEqual(res.status, 400);
         const data = JSON.parse(res.body);
-        assert.ok(data.error.toLowerCase().includes('city'));
+        assert.ok(data.error.includes('required'));
+    });
+
+    it('GET /demo returns HTML', async () => {
+        const res = await get('/demo?name=TestShop&city=Houston');
+        assert.strictEqual(res.status, 200);
+        assert.ok(res.body.includes('<!DOCTYPE html>') || res.body.includes('TestShop'));
+    });
+
+    it('POST /api/lead without email returns 400', async () => {
+        const res = await post('/api/lead', { name: 'Test' });
+        assert.strictEqual(res.status, 400);
+        const data = JSON.parse(res.body);
+        assert.ok(data.error.includes('email'));
+    });
+
+    it('GET /api/leads without auth returns 401', async () => {
+        const res = await get('/api/leads');
+        assert.strictEqual(res.status, 401);
+    });
+
+    it('GET /api/leads with auth returns leads', async () => {
+        const res = await get('/api/leads', { auth: true });
+        assert.strictEqual(res.status, 200);
+        const data = JSON.parse(res.body);
+        assert.ok(data.leads !== undefined);
+    });
+
+    it('GET /demos without auth returns 301', async () => {
+        const res = await get('/demos');
+        assert.strictEqual(res.status, 301);
+    });
+
+    it('GET /api/social/buffer-profiles without auth returns 401', async () => {
+        const res = await get('/api/social/buffer-profiles');
+        assert.strictEqual(res.status, 401);
     });
 
 });

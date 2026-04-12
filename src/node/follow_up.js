@@ -181,7 +181,7 @@ async function sendSms(toPhone, businessName, city, demoUrl) {
 async function sendFollowUp(payload) {
     const { business_name, city, contact_method, contact_value, outcome } = payload;
 
-    const interestedOutcomes = ["interested", "already_has_site_interested"];
+    const interestedOutcomes = ["interested", "already_has_site_interested", "interested_demo_sent"];
     if (!interestedOutcomes.includes(outcome)) return;
     if (!contact_value) {
         console.log(`ℹ️  No contact info collected for ${business_name} — skipping follow-up`);
